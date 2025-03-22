@@ -178,29 +178,29 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
 }
 
 void
-qr_print(uint8_t *qrCode, int32_t qrSize)
+qr_print(FILE *out, uint8_t *qrCode, int32_t qrSize)
 {
     for (int32_t i = -1; i <= qrSize; i++) {
         for (int32_t j = -1; j <= qrSize; j++) {
             if (i < 0 || i == qrSize || j < 0 || j == qrSize) {
                 // Drawing frame
-                printf("\033[47m  \033[0m");
+                fprintf(out, "\033[47m  \033[0m");
                 continue;
             }
 
             uint8_t value = qrCode[i * qrSize + j];
             if (value & ModuleBlack) {
-                printf("\033[40m  \033[0m");
+                fprintf(out, "\033[40m  \033[0m");
             }
             else if (value & ModuleWhite) {
-                printf("\033[47m  \033[0m");
+                fprintf(out, "\033[47m  \033[0m");
             }
             else {
                 // Empty module
-                printf("\033[50m  \033[0m");
+                fprintf(out, "\033[50m  \033[0m");
             }
         }
-        printf("\n");
+        fprintf(out, "\n");
     }
 }
 

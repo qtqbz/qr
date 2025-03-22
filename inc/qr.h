@@ -302,7 +302,8 @@ void qr_draw_data(uint8_t *qrCode,
                   int32_t qrSize,
                   uint8_t *codewords,
                   int32_t codewordsCount);
-void qr_print(uint8_t *qrCode,
+void qr_print(FILE *out,
+              uint8_t *qrCode,
               int32_t qrSize);
 void qr_apply_mask(uint8_t *qrCode,
                    int32_t qrSize,

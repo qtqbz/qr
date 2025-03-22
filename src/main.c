@@ -180,7 +180,7 @@ main(int32_t argc, char **argv)
     if (args.verbose) {
         printf("Data encoding complete:\n"
                "\tbits=");
-        bv_print(bv);
+        bv_print(stdout, bv);
     }
 
 
@@ -266,7 +266,7 @@ main(int32_t argc, char **argv)
 
     if (args.verbose) {
         printf("Drawing functional patterns complete:\n");
-        qr_print(qrCode, qrSize);
+        qr_print(stdout, qrCode, qrSize);
     }
 
 
@@ -288,7 +288,7 @@ main(int32_t argc, char **argv)
 
     if (args.verbose) {
         printf("Reserving format & version modules complete:\n");
-        qr_print(qrCode, qrSize);
+        qr_print(stdout, qrCode, qrSize);
     }
 
 
@@ -297,7 +297,7 @@ main(int32_t argc, char **argv)
 
     if (args.verbose) {
         printf("Drawing QR data complete:\n");
-        qr_print(qrCode, qrSize);
+        qr_print(stdout, qrCode, qrSize);
     }
 
 
@@ -307,7 +307,7 @@ main(int32_t argc, char **argv)
 
     if (args.verbose) {
         printf("Applying data masking complete:\n");
-        qr_print(qrCode, qrSize);
+        qr_print(stdout, qrCode, qrSize);
     }
 
 
@@ -316,11 +316,11 @@ main(int32_t argc, char **argv)
 
     if (args.verbose) {
         printf("Drawing format & version modules complete:\n");
-        qr_print(qrCode, qrSize);
+        qr_print(stdout, qrCode, qrSize);
     }
 
     printf("\n");
-    qr_print(qrCode, qrSize);
+    qr_print(stdout, qrCode, qrSize);
     printf("\n");
 
     return 0;

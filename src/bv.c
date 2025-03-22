@@ -4,12 +4,12 @@
 #include "utils.h"
 
 void
-bv_print(BitVec bv)
+bv_print(FILE *out, BitVec bv)
 {
     for (int32_t i = 0; i < bv.size; i++) {
-        printf("%c%s", ((bv.bytes[i / 8] >> (7 - (i % 8))) & 1) ? '1' : '0', (((i + 1) % 8) == 0) ? " " : "");
+        fprintf(out, "%c%s", ((bv.bytes[i / 8] >> (7 - (i % 8))) & 1) ? '1' : '0', (((i + 1) % 8) == 0) ? " " : "");
     }
-    printf("\n");
+    fprintf(out, "\n");
 }
 
 void
