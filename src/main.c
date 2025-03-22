@@ -7,26 +7,66 @@
 #include "rs.h"
 #include "utils.h"
 
+typedef struct CommandLineArguments CommandLineArguments;
+struct CommandLineArguments
+{
+    const char *text;
+    bool verbose;
+};
+
+static void
+print_usage(char *exe)
+{
+    fprintf(stderr, "Usage: %s [OPTIONS] <YOUR TEXT>\n", exe);
+    fprintf(stderr, "OPTIONS:\n");
+    fprintf(stderr, "\t-v verbose\n");
+}
+
+static CommandLineArguments
+parse_args(int32_t argc, char **argv)
+{
+    if (argc < 2) {
+        print_usage(argv[0]);
+        exit(1);
+    }
+    CommandLineArguments args = {0};
+
+    for (int32_t i = 1; i < argc - 1; i++) {
+        if (argv[i][0] != '-') {
+            print_usage(argv[0]);
+            exit(1);
+        }
+        for (int32_t j = 1; argv[i][j] != '\0'; j++) {
+            switch (argv[i][j]) {
+                case 'v': {
+                    args.verbose = true;
+                } break;
+                default: {
+                    fprintf(stderr, "Unknown flag: %c\n", argv[i][1]);
+                    print_usage(argv[0]);
+                    exit(1);
+                }
+            }
+        }
+    }
+
+    args.text = argv[argc - 1];
+
+    return args;
+}
+
 int32_t
 main(int32_t argc, char **argv)
 {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <YOUR TEXT>\n", argv[0]);
-        exit(1);
-    }
+    CommandLineArguments args = parse_args(argc, argv);
+    Assert(args.text != NULL);
 
-#if BUILD_DEBUG
-    bool debug = true;
-#else
-    bool debug = false;
-#endif //BUILD_DEBUG
-
-    char *text = argv[1];
+    const char *text = args.text;
     int32_t textCharCount = (int32_t)strlen(text);
     // If not specified, use the lowest error correction level
     ErrorCorrectionLevel level = Low;
 
-    if (debug) {
+    if (args.verbose) {
         printf("Generating QR:\n"
                "\ttext='%s'\n"
                "\ttextCharCount=%d\n"
@@ -54,7 +94,7 @@ main(int32_t argc, char **argv)
         }
     }
 
-    if (debug) {
+    if (args.verbose) {
         printf("Data analysis complete:\n"
            "\tmode=%s\n"
            "\tversion=%d\n"
@@ -63,7 +103,6 @@ main(int32_t argc, char **argv)
            version + 1,
            ErrorCorrectionLevelNames[level]);
     }
-
 
 
     // 2. Data Encoding
@@ -138,7 +177,7 @@ main(int32_t argc, char **argv)
         bv_append(&bv, (i & 1) ? 17 : 236, 8);
     }
 
-    if (debug) {
+    if (args.verbose) {
         printf("Data encoding complete:\n"
                "\tbits=");
         bv_print(bv);
@@ -206,7 +245,7 @@ main(int32_t argc, char **argv)
         }
     }
 
-    if (debug) {
+    if (args.verbose) {
         printf("Codeword interleaving complete:\n"
                "\tinterleaved codewords=");
         for (int32_t i = 0; i < interleavedCodewordsCount; i++) {
@@ -225,7 +264,7 @@ main(int32_t argc, char **argv)
     qr_draw_timing_patterns(qrCode, qrSize);
     qr_draw_module(qrCode, qrSize, 4 * version + 13, 8, ModuleFunctional | ModuleBlack); // dark module
 
-    if (debug) {
+    if (args.verbose) {
         printf("Drawing functional patterns complete:\n");
         qr_print(qrCode, qrSize);
     }
@@ -247,7 +286,7 @@ main(int32_t argc, char **argv)
         qr_draw_rectangle(qrCode, qrSize, qrSize - 11, 0, 6, 3, ModuleReserved);
     }
 
-    if (debug) {
+    if (args.verbose) {
         printf("Reserving format & version modules complete:\n");
         qr_print(qrCode, qrSize);
     }
@@ -256,7 +295,7 @@ main(int32_t argc, char **argv)
     // 7. Draw QR data
     qr_draw_data(qrCode, qrSize, interleavedCodewords, interleavedCodewordsCount);
 
-    if (debug) {
+    if (args.verbose) {
         printf("Drawing QR data complete:\n");
         qr_print(qrCode, qrSize);
     }
@@ -266,7 +305,7 @@ main(int32_t argc, char **argv)
     int32_t mask = 0; //TODO calc best mask
     qr_apply_mask(qrCode, qrSize, mask);
 
-    if (debug) {
+    if (args.verbose) {
         printf("Applying data masking complete:\n");
         qr_print(qrCode, qrSize);
     }
@@ -275,7 +314,7 @@ main(int32_t argc, char **argv)
     // 9. Draw QR format and version
     qr_draw_format_bits(qrCode, qrSize, level, mask);
 
-    if (debug) {
+    if (args.verbose) {
         printf("Drawing format & version modules complete:\n");
         qr_print(qrCode, qrSize);
     }
