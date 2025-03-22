@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define internal      static
-#define global        static
-#define local_persist static
-
 #if BUILD_DEBUG
 #define Assert(x)               \
     do {                        \
@@ -35,10 +31,10 @@ struct BitVec
     int32_t size;
 };
 
-internal void bv_print(BitVec bv);
-internal void bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount);
+static void bv_print(BitVec bv);
+static void bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount);
 
-internal void
+static void
 bv_print(BitVec bv)
 {
     for (int32_t i = 0; i < bv.size; i++) {
@@ -47,7 +43,7 @@ bv_print(BitVec bv)
     printf("\n");
 }
 
-internal void
+static void
 bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount)
 {
     Assert(0 <= bitsCount && bitsCount <= 64);
@@ -66,7 +62,7 @@ bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount)
 #define MaxPolygonDegree 123 // = max data codewords per block
 #define MaxGenPolygonDegree 30 // = max error correction codewords per block
 
-global const uint8_t Exp[256] = {
+static const uint8_t Exp[256] = {
       1,   2,   4,   8,  16,  32,  64, 128,  29,  58, 116, 232, 205, 135,  19,  38,
      76, 152,  45,  90, 180, 117, 234, 201, 143,   3,   6,  12,  24,  48,  96, 192,
     157,  39,  78, 156,  37,  74, 148,  53, 106, 212, 181, 119, 238, 193, 159,  35,
@@ -85,7 +81,7 @@ global const uint8_t Exp[256] = {
      44,  88, 176, 125, 250, 233, 207, 131,  27,  54, 108, 216, 173,  71, 142,   1,
 };
 
-global const uint8_t Log[256] = {
+static const uint8_t Log[256] = {
       0,   0,   1,  25,   2,  50,  26, 198,   3, 223,  51, 238,  27, 104, 199,  75,
       4, 100, 224,  14,  52, 141, 239, 129,  28, 193, 105, 248, 200,   8,  76, 113,
       5, 138, 101,  47, 225,  36,  15,  33,  53, 147, 142, 218, 240,  18, 130,  69,
@@ -104,7 +100,7 @@ global const uint8_t Log[256] = {
      79, 174, 213, 233, 230, 231, 173, 232, 116, 214, 244, 234, 168,  80,  88, 175,
 };
 
-global const uint8_t GenPoly[MaxGenPolygonDegree + 1][MaxGenPolygonDegree + 1] = {
+static const uint8_t GenPoly[MaxGenPolygonDegree + 1][MaxGenPolygonDegree + 1] = {
     {  1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
     {  1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
     {  1,   3,   2,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
@@ -138,24 +134,24 @@ global const uint8_t GenPoly[MaxGenPolygonDegree + 1][MaxGenPolygonDegree + 1] =
     {  1, 212, 246,  77,  73, 195, 192,  75,  98,   5,  70, 103, 177,  22, 217, 138,  51, 181, 246,  72,  25,  18,  46, 228,  74, 216, 195,  11, 106, 130, 150, },
 };
 
-internal uint8_t gf256_multiply(uint8_t a, uint8_t b);
-internal uint8_t gf256_divide(uint8_t a, uint8_t b);
-internal int32_t gf256_poly_divide(const uint8_t *poly, int32_t polyDegree, const uint8_t *divisor, int32_t divisorDegree, uint8_t *remainder);
+static uint8_t gf256_multiply(uint8_t a, uint8_t b);
+static uint8_t gf256_divide(uint8_t a, uint8_t b);
+static int32_t gf256_poly_divide(const uint8_t *poly, int32_t polyDegree, const uint8_t *divisor, int32_t divisorDegree, uint8_t *remainder);
 
-internal uint8_t
+static uint8_t
 gf256_multiply(uint8_t a, uint8_t b)
 {
     return (a && b) ? Exp[(Log[a] + Log[b]) % 255] : 0;
 }
 
-internal uint8_t
+static uint8_t
 gf256_divide(uint8_t a, uint8_t b)
 {
     Assert(b != 0);
     return Exp[(Log[a] + Log[b] * 254) % 255];
 }
 
-internal int32_t
+static int32_t
 gf256_poly_divide(const uint8_t *poly, int32_t polyDegree, const uint8_t *divisor, int32_t divisorDegree, uint8_t *remainder)
 {
     Assert(0 <= polyDegree && divisorDegree <= MaxPolygonDegree);
@@ -213,7 +209,7 @@ enum EncodingMode
     EncodingModeCount,
 };
 
-global const char *const EncodingModeNames[EncodingModeCount] = {
+static const char *const EncodingModeNames[EncodingModeCount] = {
     "Numeric (0001)",
     "Alphanumeric (0010)",
     "Byte (0100)",
@@ -231,7 +227,7 @@ enum ErrorCorrectionLevel
     ErrorCorrectionLevelCount,
 };
 
-global const char *const ErrorCorrectionLevelNames[ErrorCorrectionLevelCount] = {
+static const char *const ErrorCorrectionLevelNames[ErrorCorrectionLevelCount] = {
     "Low",
     "Medium",
     "Quartile",
@@ -248,7 +244,7 @@ enum ModuleFlag
 };
 
 // Maximum length of the encoded text.
-global const int32_t MaxCharCount[EncodingModeCount][ErrorCorrectionLevelCount][VersionCount] = {
+static const int32_t MaxCharCount[EncodingModeCount][ErrorCorrectionLevelCount][VersionCount] = {
     // Numeric
     {
         {  41,   77,  127,  187,  255,  322,  370,  461,  552,  652,
@@ -309,7 +305,7 @@ global const int32_t MaxCharCount[EncodingModeCount][ErrorCorrectionLevelCount][
 };
 
 // Number of bits allocated for the length of the encoded text.
-global const int32_t LengthBitsCount[EncodingModeCount][VersionCount] = {
+static const int32_t LengthBitsCount[EncodingModeCount][VersionCount] = {
     // Numeric
     { 10, 10, 10, 10, 10, 10, 10, 10, 10, 12,
       12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
@@ -328,7 +324,7 @@ global const int32_t LengthBitsCount[EncodingModeCount][VersionCount] = {
 };
 
 // Number of data modules and error correction modules.
-global const int32_t ContentModulesCount[VersionCount] = {
+static const int32_t ContentModulesCount[VersionCount] = {
       208,   359,   567,   807,  1079,  1383,  1568,  1936,  2336,  2768,
      3232,  3728,  4256,  4651,  5243,  5867,  6523,  7211,  7931,  8683,
      9252, 10068, 10916, 11796, 12708, 13652, 14628, 15371, 16411, 17483,
@@ -336,7 +332,7 @@ global const int32_t ContentModulesCount[VersionCount] = {
 };
 
 // Number of ECC blocks.
-global const int32_t ErrorCorrectionBlocksCount[ErrorCorrectionLevelCount][VersionCount] = {
+static const int32_t ErrorCorrectionBlocksCount[ErrorCorrectionLevelCount][VersionCount] = {
     // Low
     {  1,  1,  1,  1,  1,  2,  2,  2,  2,  4,
        4,  4,  4,  4,  6,  6,  6,  6,  7,  8,
@@ -360,7 +356,7 @@ global const int32_t ErrorCorrectionBlocksCount[ErrorCorrectionLevelCount][Versi
 };
 
 // Number of codewords inside the ECC block.
-global const int32_t ErrorCorrectionCodewordsPerBlockCount[ErrorCorrectionLevelCount][VersionCount] = {
+static const int32_t ErrorCorrectionCodewordsPerBlockCount[ErrorCorrectionLevelCount][VersionCount] = {
     // Low
     {  7, 10, 15, 20, 26, 18, 20, 24, 30, 18,
       20, 24, 26, 30, 22, 24, 28, 30, 28, 28,
@@ -383,7 +379,7 @@ global const int32_t ErrorCorrectionCodewordsPerBlockCount[ErrorCorrectionLevelC
       30, 30, 30, 30, 30, 30, 30, 30, 30, 30, },
 };
 
-global const int32_t AlignmentCoordinates[VersionCount][AlignmentCoordinatesCount] = {
+static const int32_t AlignmentCoordinates[VersionCount][AlignmentCoordinatesCount] = {
     { 0,  0,  0,  0,   0,   0,   0 },
     { 6, 18,  0,  0,   0,   0,   0 },
     { 6, 22,  0,  0,   0,   0,   0 },
@@ -426,7 +422,7 @@ global const int32_t AlignmentCoordinates[VersionCount][AlignmentCoordinatesCoun
     { 6, 30, 58, 86, 114, 142, 170 },
 };
 
-global const uint32_t FormatBits[ErrorCorrectionLevelCount][MaskCount] = {
+static const uint32_t FormatBits[ErrorCorrectionLevelCount][MaskCount] = {
     // Low
     { 0b111011111000100, 0b111001011110011, 0b111110110101010, 0b111100010011101,
       0b110011000101111, 0b110001100011000, 0b110110001000001, 0b110100101110110, },
@@ -441,12 +437,12 @@ global const uint32_t FormatBits[ErrorCorrectionLevelCount][MaskCount] = {
       0b000011101100010, 0b000001001010101, 0b000110100001100, 0b000100000111011, },
 };
 
-internal int32_t qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level);
-internal int32_t qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset);
-internal EncodingMode qr_get_encoding_mode(const char *text, int32_t textCharCount);
-internal int32_t qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount);
+static int32_t qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level);
+static int32_t qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset);
+static EncodingMode qr_get_encoding_mode(const char *text, int32_t textCharCount);
+static int32_t qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount);
 
-internal int32_t
+static int32_t
 qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 {
     int32_t contentCodewordsCount = ContentModulesCount[version] / 8;
@@ -455,7 +451,7 @@ qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
     return dataCodewordsCount;
 }
 
-internal int32_t
+static int32_t
 qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset)
 {
     for (int32_t i = offset; i < textCharCount; i++) {
@@ -467,7 +463,7 @@ qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *chars
     return -1;
 }
 
-internal EncodingMode
+static EncodingMode
 qr_get_encoding_mode(const char *text, int32_t textCharCount)
 {
     int32_t i = qr_find_first_unmatch_index(text, textCharCount, "0123456789", 0);
@@ -481,7 +477,7 @@ qr_get_encoding_mode(const char *text, int32_t textCharCount)
     return Byte;
 }
 
-internal int32_t
+static int32_t
 qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount)
 {
     for (int32_t version = MinVersion; version <= MaxVersion; version++) {
@@ -492,7 +488,7 @@ qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCo
     return VersionInvalid;
 }
 
-internal void
+static void
 qr_draw_module(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, ModuleFlag value)
 {
     if ((0 <= row && row < qrSize) && (0 <= column && column < qrSize)) {
@@ -500,7 +496,7 @@ qr_draw_module(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, Mod
     }
 }
 
-internal void
+static void
 qr_draw_rectangle(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, int32_t width, int32_t height, ModuleFlag value)
 {
     for (int32_t i = 0; i < height; i++) {
@@ -510,13 +506,13 @@ qr_draw_rectangle(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, 
     }
 }
 
-internal void
+static void
 qr_draw_square(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, int32_t size, ModuleFlag value)
 {
     qr_draw_rectangle(qrCode, qrSize, row, column, size, size, value);
 }
 
-internal void
+static void
 qr_draw_finder_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column)
 {
     qr_draw_square(qrCode, qrSize, row - 1, column - 1, 9, ModuleFunctional | ModuleWhite); // separator
@@ -525,7 +521,7 @@ qr_draw_finder_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t col
     qr_draw_square(qrCode, qrSize, row + 2, column + 2, 3, ModuleFunctional | ModuleBlack);
 }
 
-internal void
+static void
 qr_draw_finder_patterns(uint8_t *qrCode, int32_t qrSize)
 {
     qr_draw_finder_pattern(qrCode, qrSize, 0, 0);
@@ -533,7 +529,7 @@ qr_draw_finder_patterns(uint8_t *qrCode, int32_t qrSize)
     qr_draw_finder_pattern(qrCode, qrSize, qrSize - 7, 0);
 }
 
-internal void
+static void
 qr_draw_alignment_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column)
 {
     qr_draw_square(qrCode, qrSize, row + 0, column + 0, 5, ModuleFunctional | ModuleBlack);
@@ -541,7 +537,7 @@ qr_draw_alignment_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t 
     qr_draw_module(qrCode, qrSize, row + 2, column + 2, ModuleFunctional | ModuleBlack);
 }
 
-internal void
+static void
 qr_draw_alignment_patterns(uint8_t *qrCode, int32_t qrSize, int32_t version)
 {
     for (int32_t i = 0; i < AlignmentCoordinatesCount; i++) {
@@ -566,7 +562,7 @@ qr_draw_alignment_patterns(uint8_t *qrCode, int32_t qrSize, int32_t version)
     }
 }
 
-internal void
+static void
 qr_draw_timing_patterns(uint8_t *qrCode, int32_t qrSize)
 {
     ModuleFlag value = ModuleFunctional | ModuleBlack;
@@ -577,7 +573,7 @@ qr_draw_timing_patterns(uint8_t *qrCode, int32_t qrSize)
     }
 }
 
-internal void
+static void
 qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewordsCount)
 {
     int32_t column = qrSize - 1;
@@ -619,7 +615,7 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
     }
 }
 
-internal void
+static void
 qr_print(uint8_t *qrCode, int32_t qrSize)
 {
     for (int32_t i = -1; i <= qrSize; i++) {
@@ -646,7 +642,7 @@ qr_print(uint8_t *qrCode, int32_t qrSize)
     }
 }
 
-internal void
+static void
 qr_apply_mask(uint8_t *qrCode, int32_t qrSize, int32_t mask)
 {
     for (int32_t row = 0; row < qrSize; row++) {
@@ -675,7 +671,7 @@ qr_apply_mask(uint8_t *qrCode, int32_t qrSize, int32_t mask)
     }
 }
 
-internal void
+static void
 qr_draw_format_bits(uint8_t *qrCode, int32_t qrSize, ErrorCorrectionLevel level, int32_t mask)
 {
     uint32_t formatBits = FormatBits[level][mask];
