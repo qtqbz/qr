@@ -83,9 +83,9 @@ uint8_t gf256_multiply(uint8_t a,
 uint8_t gf256_divide(uint8_t a,
                      uint8_t b);
 int32_t gf256_poly_divide(const uint8_t *poly,
-                          int32_t polyDegree,
-                          const uint8_t *divisor,
-                          int32_t divisorDegree,
-                          uint8_t *remainder);
+                  int32_t polyLength,
+                  const uint8_t *divisor,
+                  int32_t divisorLength,
+                  uint8_t *remainder);
 
 #endif //RS_H

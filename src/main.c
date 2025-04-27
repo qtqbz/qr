@@ -199,6 +199,7 @@ main(int32_t argc, char **argv)
     Assert(shortBlockLength <= MaxBlocksLength);
 
     int32_t errorCodewordsPerBlockCount = ErrorCorrectionCodewordsPerBlockCount[level][version];
+    const uint8_t *divisor = GenPoly[errorCodewordsPerBlockCount];
 
     int32_t dataCodewordsIndex = 0;
     for (int32_t i = 0; i < blocksCount; i++) {
@@ -206,8 +207,8 @@ main(int32_t argc, char **argv)
         int32_t blockIndex = 0;
 
         // Copy data codewords to block
-        int32_t dataCodewordsPerBlockCount = (i < shortBlocksCount) ? shortBlockLength - errorCodewordsPerBlockCount
-                                                                : shortBlockLength - errorCodewordsPerBlockCount + 1;
+        int32_t currBlockLength = (i < shortBlocksCount) ? shortBlockLength : shortBlockLength + 1;
+        int32_t dataCodewordsPerBlockCount = currBlockLength - errorCodewordsPerBlockCount;
         for (int32_t j = 0; j < dataCodewordsPerBlockCount; j++) {
             block[blockIndex++] = dataCodewords[dataCodewordsIndex++];
         }
@@ -219,11 +220,31 @@ main(int32_t argc, char **argv)
 
         // Calculate error correcting codewords
         uint8_t errorCodewords[MaxPolygonDegree + 1] = {0};
-        gf256_poly_divide(block,
-                          (i < shortBlocksCount) ? shortBlockLength - 1 : shortBlockLength,
-                          GenPoly[errorCodewordsPerBlockCount],
-                          errorCodewordsPerBlockCount,
-                          errorCodewords);
+        int32_t remainderLength = gf256_poly_divide(block,
+                                                    currBlockLength,
+                                                    divisor,
+                                                    errorCodewordsPerBlockCount + 1,
+                                                    errorCodewords);
+        Assert(remainderLength == errorCodewordsPerBlockCount);
+
+        if (args.verbose) {
+            printf("   data[%3d]: ", currBlockLength);
+            for (int32_t i = 0; i < currBlockLength; i++) {
+                printf("%4d, ", block[i]);
+            }
+            printf("\n");
+            printf("divisor[%3d]: ", errorCodewordsPerBlockCount + 1);
+            for (int32_t i = 0; i < errorCodewordsPerBlockCount + 1; i++) {
+                printf("%4d, ", divisor[i]);
+            }
+            printf("\n");
+            printf(" result[%3d]: ", errorCodewordsPerBlockCount);
+            for (int32_t i = 0; i < errorCodewordsPerBlockCount; i++) {
+                printf("%4d, ", errorCodewords[i]);
+            }
+            printf("\n");
+            printf("\n");
+        }
 
         // Copy error correcting codewords to block
         int32_t errorCodewordsIndex = 0;
@@ -231,6 +252,7 @@ main(int32_t argc, char **argv)
             block[blockIndex++] = errorCodewords[errorCodewordsIndex++];
         }
     }
+
 
     // 4. Codeword interleaving
     uint8_t interleavedCodewords[MaxBlocksCount * MaxBlocksLength] = {0};

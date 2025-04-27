@@ -16,36 +16,34 @@ gf256_divide(uint8_t a, uint8_t b)
 
 int32_t
 gf256_poly_divide(const uint8_t *poly,
-                  int32_t polyDegree,
+                  int32_t polyLength,
                   const uint8_t *divisor,
-                  int32_t divisorDegree,
+                  int32_t divisorLength,
                   uint8_t *remainder)
 {
-    Assert(0 <= polyDegree && divisorDegree <= MaxPolygonDegree);
-    Assert(0 <= divisorDegree && divisorDegree <= MaxGenPolygonDegree);
-    Assert(divisor[0] != 0);
-
-    for (int32_t i = 0; i <= polyDegree; i++) {
+    for (int32_t i = 0; i < polyLength; i++) {
         remainder[i] = poly[i];
     }
 
     int32_t index = 0;
-    for (int32_t i = divisorDegree; i <= polyDegree; i++) {
-        uint8_t factor = gf256_divide(remainder[index], divisor[0]);
-        for (int32_t j = 0; j <= divisorDegree; j++) {
-            remainder[index + j] ^= gf256_multiply(factor, divisor[j]);
+    for (int32_t i = divisorLength - 1; i < polyLength; i++) {
+        if (remainder[index]) {
+            uint8_t factor = gf256_divide(remainder[index], divisor[0]);
+            for (int32_t j = 0; j < divisorLength; j++) {
+                remainder[index + j] ^= gf256_multiply(factor, divisor[j]);
+            }
         }
         index++;
     }
 
-    while (index <= polyDegree && remainder[index] == 0) {
+    while (index < polyLength && remainder[index] == 0) {
         index++;
     }
 
-    int32_t remainderDegree = polyDegree - index;
-    for (int32_t i = index; i <= polyDegree; i++) {
+    int32_t remainderLength = polyLength - index;
+    for (int32_t i = index; i < polyLength; i++) {
         remainder[i - index] = remainder[i];
     }
 
-    return remainderDegree;
+    return remainderLength;
 }
