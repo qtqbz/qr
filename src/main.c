@@ -335,6 +335,9 @@ main(int32_t argc, char **argv)
 
     // 9. Draw QR format and version
     qr_draw_format_bits(qrCode, qrSize, level, mask);
+    if (version > 5) {
+        qr_draw_version_bits(qrCode, qrSize, version);
+    }
 
     if (args.verbose) {
         printf("Drawing format & version modules complete:\n");

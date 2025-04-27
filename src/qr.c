@@ -262,3 +262,21 @@ qr_draw_format_bits(uint8_t *qrCode, int32_t qrSize, ErrorCorrectionLevel level,
         bitIndex--;
     }
 }
+
+void
+qr_draw_version_bits(uint8_t *qrCode, int32_t qrSize, int32_t version)
+{
+    Assert(version > 5 && version <= MaxVersion);
+
+    uint32_t versionBits = VersionBits[version];
+    int32_t bitIndex = 0;
+
+    for (int32_t i = 0; i < 6; i++) {
+        for (int32_t j = 0; j < 3; j++) {
+            ModuleValue value = ((versionBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite;
+            qr_draw_module(qrCode, qrSize, i, qrSize - 11 + j, value);
+            qr_draw_module(qrCode, qrSize, qrSize - 11 + j, i, value);
+            bitIndex++;
+        }
+    }
+}
