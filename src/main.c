@@ -284,7 +284,7 @@ main(int32_t argc, char **argv)
     qr_draw_finder_patterns(qrCode, qrSize);
     qr_draw_alignment_patterns(qrCode, qrSize, version);
     qr_draw_timing_patterns(qrCode, qrSize);
-    qr_draw_module(qrCode, qrSize, 4 * version + 13, 8, ModuleFunctional | ModuleBlack); // dark module
+    qr_draw_module(qrCode, qrSize, 4 * version + 13, 8, FunctionalBlack); // dark module
 
     if (args.verbose) {
         printf("Drawing functional patterns complete:\n");
@@ -294,18 +294,18 @@ main(int32_t argc, char **argv)
 
     // 6. Reserve format & version modules
     // Vertical format modules
-    qr_draw_rectangle(qrCode, qrSize, 0, 8, 1, 6, ModuleReserved);
-    qr_draw_rectangle(qrCode, qrSize, 7, 8, 1, 2, ModuleReserved);
-    qr_draw_rectangle(qrCode, qrSize, qrSize - 7, 8, 1, 8, ModuleReserved);
+    qr_draw_rectangle(qrCode, qrSize, 0, 8, 1, 6, FunctionalBlack);
+    qr_draw_rectangle(qrCode, qrSize, 7, 8, 1, 2, FunctionalBlack);
+    qr_draw_rectangle(qrCode, qrSize, qrSize - 7, 8, 1, 8, FunctionalBlack);
     // Horizontal format modules
-    qr_draw_rectangle(qrCode, qrSize, 8, 0, 6, 1, ModuleReserved);
-    qr_draw_rectangle(qrCode, qrSize, 8, 7, 2, 1, ModuleReserved);
-    qr_draw_rectangle(qrCode, qrSize, 8, qrSize - 8, 8, 1, ModuleReserved);
+    qr_draw_rectangle(qrCode, qrSize, 8, 0, 6, 1, FunctionalBlack);
+    qr_draw_rectangle(qrCode, qrSize, 8, 7, 2, 1, FunctionalBlack);
+    qr_draw_rectangle(qrCode, qrSize, 8, qrSize - 8, 8, 1, FunctionalBlack);
 
     if (version > 5) {
         // Reserve version modules
-        qr_draw_rectangle(qrCode, qrSize, 0, qrSize - 11, 3, 6, ModuleReserved);
-        qr_draw_rectangle(qrCode, qrSize, qrSize - 11, 0, 6, 3, ModuleReserved);
+        qr_draw_rectangle(qrCode, qrSize, 0, qrSize - 11, 3, 6, FunctionalBlack);
+        qr_draw_rectangle(qrCode, qrSize, qrSize - 11, 0, 6, 3, FunctionalBlack);
     }
 
     if (args.verbose) {
