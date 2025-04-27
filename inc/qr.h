@@ -357,7 +357,7 @@ void qr_draw_format_bits(uint8_t *qrCode,
                          ErrorCorrectionLevel level,
                          int32_t mask);
 void qr_draw_version_bits(uint8_t *qrCode,
-                         int32_t qrSize,
-                         int32_t version);
+                          int32_t qrSize,
+                          int32_t version);
 
 #endif //QR_H

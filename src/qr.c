@@ -180,9 +180,9 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
 void
 qr_print(FILE *out, uint8_t *qrCode, int32_t qrSize)
 {
-    for (int32_t i = -1; i <= qrSize; i++) {
-        for (int32_t j = -1; j <= qrSize; j++) {
-            if (i < 0 || i == qrSize || j < 0 || j == qrSize) {
+    for (int32_t i = -4; i <= qrSize + 4; i++) {
+        for (int32_t j = -4; j <= qrSize + 4; j++) {
+            if (i < 0 || i >= qrSize || j < 0 || j >= qrSize) {
                 // Drawing frame
                 fprintf(out, "\033[47m  \033[0m");
                 continue;
