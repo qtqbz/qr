@@ -1,4 +1,4 @@
-#include "rs.h"
+#include "gf256.h"
 #include "utils.h"
 
 uint8_t

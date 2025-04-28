@@ -2,9 +2,9 @@ INCDIR := inc
 SRCDIR := src
 OBJDIR := obj
 
-INC := $(INCDIR)/bv.h $(INCDIR)/rs.h $(INCDIR)/qr.h $(INCDIR)/utils.h
-SRC := $(SRCDIR)/bv.c $(SRCDIR)/rs.c $(SRCDIR)/qr.c $(SRCDIR)/main.c
-OBJ := $(OBJDIR)/bv.o $(OBJDIR)/rs.o $(OBJDIR)/qr.o $(OBJDIR)/main.o
+INC := $(INCDIR)/bv.h $(INCDIR)/gf256.h $(INCDIR)/qr.h $(INCDIR)/utils.h
+SRC := $(SRCDIR)/bv.c $(SRCDIR)/gf256.c $(SRCDIR)/qr.c $(SRCDIR)/main.c
+OBJ := $(OBJDIR)/bv.o $(OBJDIR)/gf256.o $(OBJDIR)/qr.o $(OBJDIR)/main.o
 
 EXE := qr
 

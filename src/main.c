@@ -4,7 +4,7 @@
 
 #include "qr.h"
 #include "bv.h"
-#include "rs.h"
+#include "gf256.h"
 #include "utils.h"
 
 typedef struct CommandLineArguments CommandLineArguments;

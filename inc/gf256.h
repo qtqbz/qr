@@ -1,5 +1,5 @@
-#ifndef RS_H
-#define RS_H
+#ifndef GF256_H
+#define GF256_H
 
 #include <stdint.h>
 
@@ -82,4 +82,4 @@ uint8_t gf256_multiply(uint8_t a, uint8_t b);
 uint8_t gf256_divide(uint8_t a, uint8_t b);
 int32_t gf256_poly_divide(const uint8_t *poly, int32_t polyLength, const uint8_t *divisor, int32_t divisorLength, uint8_t *remainder);
 
-#endif //RS_H
+#endif //GF256_H
