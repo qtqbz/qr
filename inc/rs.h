@@ -78,14 +78,8 @@ static const uint8_t GenPoly[MaxGenPolygonDegree + 1][MaxGenPolygonDegree + 1] =
     {  1, 212, 246,  77,  73, 195, 192,  75,  98,   5,  70, 103, 177,  22, 217, 138,  51, 181, 246,  72,  25,  18,  46, 228,  74, 216, 195,  11, 106, 130, 150, },
 };
 
-uint8_t gf256_multiply(uint8_t a,
-                       uint8_t b);
-uint8_t gf256_divide(uint8_t a,
-                     uint8_t b);
-int32_t gf256_poly_divide(const uint8_t *poly,
-                  int32_t polyLength,
-                  const uint8_t *divisor,
-                  int32_t divisorLength,
-                  uint8_t *remainder);
+uint8_t gf256_multiply(uint8_t a, uint8_t b);
+uint8_t gf256_divide(uint8_t a, uint8_t b);
+int32_t gf256_poly_divide(const uint8_t *poly, int32_t polyLength, const uint8_t *divisor, int32_t divisorLength, uint8_t *remainder);
 
 #endif //RS_H

@@ -4,6 +4,15 @@
 #include "qr.h"
 #include "utils.h"
 
+#define QR_MODULE_VALUE(qr, row, column) ((qr)->modules[(row) * (qr)->size + (column)])
+#define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
+#define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
+
+static const ModuleValue DataWhite = { .type = TypeData, .color = ColorWhite };
+static const ModuleValue DataBlack = { .type = TypeData, .color = ColorBlack };
+static const ModuleValue FunctionalWhite = { .type = TypeFunctional, .color = ColorWhite };
+static const ModuleValue FunctionalBlack = { .type = TypeFunctional, .color = ColorBlack };
+
 int32_t
 qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 {
@@ -50,57 +59,57 @@ qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCo
     return VersionInvalid;
 }
 
-void
-qr_draw_module(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, ModuleValue value)
+static void
+draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
 {
-    if ((0 <= row && row < qrSize) && (0 <= column && column < qrSize)) {
-        qrCode[row * qrSize + column] = value;
+    if ((0 <= row && row < qr->size) && (0 <= column && column < qr->size)) {
+        QR_MODULE_VALUE(qr, row, column) = value;
     }
 }
 
-void
-qr_draw_rectangle(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, int32_t width, int32_t height, ModuleValue value)
+static void
+draw_rectangle(QR *qr, int32_t row, int32_t column, int32_t width, int32_t height, ModuleValue value)
 {
     for (int32_t i = 0; i < height; i++) {
         for (int32_t j = 0; j < width; j++) {
-            qr_draw_module(qrCode, qrSize, row + i, column + j, value);
+            draw_module(qr, row + i, column + j, value);
         }
     }
 }
 
-void
-qr_draw_square(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column, int32_t size, ModuleValue value)
+static void
+draw_square(QR *qr, int32_t row, int32_t column, int32_t size, ModuleValue value)
 {
-    qr_draw_rectangle(qrCode, qrSize, row, column, size, size, value);
+    draw_rectangle(qr, row, column, size, size, value);
 }
 
-void
-qr_draw_finder_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column)
+static void
+draw_finder_pattern(QR *qr, int32_t row, int32_t column)
 {
-    qr_draw_square(qrCode, qrSize, row - 1, column - 1, 9, FunctionalWhite); // separator
-    qr_draw_square(qrCode, qrSize, row + 0, column + 0, 7, FunctionalBlack);
-    qr_draw_square(qrCode, qrSize, row + 1, column + 1, 5, FunctionalWhite);
-    qr_draw_square(qrCode, qrSize, row + 2, column + 2, 3, FunctionalBlack);
+    draw_square(qr, row - 1, column - 1, 9, FunctionalWhite); // separator
+    draw_square(qr, row + 0, column + 0, 7, FunctionalBlack);
+    draw_square(qr, row + 1, column + 1, 5, FunctionalWhite);
+    draw_square(qr, row + 2, column + 2, 3, FunctionalBlack);
 }
 
-void
-qr_draw_finder_patterns(uint8_t *qrCode, int32_t qrSize)
+static void
+draw_finder_patterns(QR *qr)
 {
-    qr_draw_finder_pattern(qrCode, qrSize, 0, 0);
-    qr_draw_finder_pattern(qrCode, qrSize, 0, qrSize - 7);
-    qr_draw_finder_pattern(qrCode, qrSize, qrSize - 7, 0);
+    draw_finder_pattern(qr, 0, 0);
+    draw_finder_pattern(qr, 0, qr->size - 7);
+    draw_finder_pattern(qr, qr->size - 7, 0);
 }
 
-void
-qr_draw_alignment_pattern(uint8_t *qrCode, int32_t qrSize, int32_t row, int32_t column)
+static void
+draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
 {
-    qr_draw_square(qrCode, qrSize, row + 0, column + 0, 5, FunctionalBlack);
-    qr_draw_square(qrCode, qrSize, row + 1, column + 1, 3, FunctionalWhite);
-    qr_draw_module(qrCode, qrSize, row + 2, column + 2, FunctionalBlack);
+    draw_square(qr, row + 0, column + 0, 5, FunctionalBlack);
+    draw_square(qr, row + 1, column + 1, 3, FunctionalWhite);
+    draw_module(qr, row + 2, column + 2, FunctionalBlack);
 }
 
-void
-qr_draw_alignment_patterns(uint8_t *qrCode, int32_t qrSize, int32_t version)
+static void
+draw_alignment_patterns(QR *qr, int32_t version)
 {
     for (int32_t i = 0; i < AlignmentCoordinatesCount; i++) {
         int32_t rowCenter = AlignmentCoordinates[version][i];
@@ -112,43 +121,79 @@ qr_draw_alignment_patterns(uint8_t *qrCode, int32_t qrSize, int32_t version)
             if (columnCenter == 0) {
                 break;
             }
-            if (qrCode[(rowCenter - 2) * qrSize + (columnCenter - 2)] == 0
-                && qrCode[(rowCenter - 2) * qrSize + (columnCenter + 2)] == 0
-                && qrCode[(rowCenter + 2) * qrSize + (columnCenter - 2)] == 0
-                && qrCode[(rowCenter + 2) * qrSize + (columnCenter + 2)] == 0) {
+            if (QR_MODULE_TYPE(qr, rowCenter - 2, columnCenter - 2) == TypeNone
+                && QR_MODULE_TYPE(qr, rowCenter - 2, columnCenter + 2) == TypeNone
+                && QR_MODULE_TYPE(qr, rowCenter + 2, columnCenter - 2) == TypeNone
+                && QR_MODULE_TYPE(qr, rowCenter + 2, columnCenter + 2) == TypeNone) {
                 int32_t row = rowCenter - 2;
                 int32_t column = columnCenter - 2;
-                qr_draw_alignment_pattern(qrCode, qrSize, row, column);
+                draw_alignment_pattern(qr, row, column);
             }
         }
     }
 }
 
-void
-qr_draw_timing_patterns(uint8_t *qrCode, int32_t qrSize)
+static void
+draw_timing_patterns(QR *qr)
 {
     ModuleValue value = FunctionalBlack;
-    for (int32_t i = 8; i < (qrSize - 7); i++) {
-        qr_draw_module(qrCode, qrSize, 6, i, value);
-        qr_draw_module(qrCode, qrSize, i, 6, value);
-        value = value ^ FunctionalBlack ^ FunctionalWhite;
+    for (int32_t i = 8; i < (qr->size - 7); i++) {
+        draw_module(qr, 6, i, value);
+        draw_module(qr, i, 6, value);
+        value.color = !value.color;
     }
 }
 
 void
-qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewordsCount)
+qr_draw_functional_patterns(QR *qr, int32_t version)
 {
-    int32_t column = qrSize - 1;
-    int32_t row = qrSize - 1;
+    draw_finder_patterns(qr);
+    draw_alignment_patterns(qr, version);
+    draw_timing_patterns(qr);
+    draw_module(qr, 4 * version + 13, 8, FunctionalBlack); // dark module
+}
+
+void
+qr_reserve_format_modules(QR *qr)
+{
+    // Vertical format modules
+    draw_rectangle(qr, 0, 8, 1, 6, FunctionalBlack);
+    draw_rectangle(qr, 7, 8, 1, 2, FunctionalBlack);
+    draw_rectangle(qr, qr->size - 7, 8, 1, 8, FunctionalBlack);
+
+    // Horizontal format modules
+    draw_rectangle(qr, 8, 0, 6, 1, FunctionalBlack);
+    draw_rectangle(qr, 8, 7, 2, 1, FunctionalBlack);
+    draw_rectangle(qr, 8, qr->size - 8, 8, 1, FunctionalBlack);
+}
+
+void
+qr_reserve_version_modules(QR *qr, int32_t version)
+{
+    if (version < 6) {
+        return;
+    }
+    // Vertical version modules
+    draw_rectangle(qr, qr->size - 11, 0, 6, 3, FunctionalBlack);
+
+    // Horizontal version modules
+    draw_rectangle(qr, 0, qr->size - 11, 3, 6, FunctionalBlack);
+}
+
+void
+qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
+{
+    int32_t column = qr->size - 1;
+    int32_t row = qr->size - 1;
     int32_t rowDirection = -1; // -1 == up, +1 == down
     int32_t codewordsIndex = 0;
     int32_t bitIndex = 7;
 
     while (row >= 0 && column >= 0) {
-        if (qrCode[row * qrSize + column] == 0) {
+        if (QR_MODULE_TYPE(qr, row, column) == TypeNone) {
             if (codewordsIndex < codewordsCount) {
                 uint8_t codeword = codewords[codewordsIndex];
-                qrCode[row * qrSize + column] = ((codeword >> bitIndex) & 1) ? DataBlack : DataWhite;
+                QR_MODULE_VALUE(qr, row, column) = ((codeword >> bitIndex) & 1) ? DataBlack : DataWhite;
                 if (bitIndex == 0) {
                     codewordsIndex++;
                     bitIndex = 7;
@@ -158,7 +203,7 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
                 }
             }
             else {
-                qrCode[row * qrSize + column] = DataWhite;
+                QR_MODULE_VALUE(qr, row, column) = DataWhite;
             }
         } else {
             if ((column == 6) || (column > 6 && column % 2 == 0) || (column < 6 && column % 2 == 1)) {
@@ -167,7 +212,7 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
             else {
                 column += 1;
                 row += rowDirection;
-                if (row < 0 || row == qrSize) {
+                if (row < 0 || row == qr->size) {
                     rowDirection = -rowDirection;
                     column -= 2;
                     row += rowDirection;
@@ -178,26 +223,21 @@ qr_draw_data(uint8_t *qrCode, int32_t qrSize, uint8_t *codewords, int32_t codewo
 }
 
 void
-qr_print(FILE *out, uint8_t *qrCode, int32_t qrSize)
+qr_print(FILE *out, QR *qr)
 {
-    for (int32_t i = -4; i <= qrSize + 4; i++) {
-        for (int32_t j = -4; j <= qrSize + 4; j++) {
-            if (i < 0 || i >= qrSize || j < 0 || j >= qrSize) {
+    for (int32_t i = -4; i <= qr->size + 4; i++) {
+        for (int32_t j = -4; j <= qr->size + 4; j++) {
+            if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
                 // Drawing frame
                 fprintf(out, "\033[47m  \033[0m");
                 continue;
             }
 
-            uint8_t value = qrCode[i * qrSize + j];
-            if (value == DataBlack || value == FunctionalBlack) {
-                fprintf(out, "\033[40m  \033[0m");
-            }
-            else if (value == DataWhite || value == FunctionalWhite) {
+            if (QR_MODULE_COLOR(qr, i, j) == ColorWhite) {
                 fprintf(out, "\033[47m  \033[0m");
             }
             else {
-                // Empty module
-                fprintf(out, "\033[50m  \033[0m");
+                fprintf(out, "\033[40m  \033[0m");
             }
         }
         fprintf(out, "\n");
@@ -205,12 +245,12 @@ qr_print(FILE *out, uint8_t *qrCode, int32_t qrSize)
 }
 
 void
-qr_apply_mask(uint8_t *qrCode, int32_t qrSize, int32_t mask)
+qr_apply_mask(QR *qr, int32_t mask)
 {
-    for (int32_t row = 0; row < qrSize; row++) {
-        for (int32_t column = 0; column < qrSize; column++) {
-            uint8_t value = qrCode[row * qrSize + column];
-            if ((value != DataBlack) && (value != DataWhite)) {
+    for (int32_t row = 0; row < qr->size; row++) {
+        for (int32_t column = 0; column < qr->size; column++) {
+            ModuleValue value = QR_MODULE_VALUE(qr, row, column);
+            if (value.type != TypeData) {
                 continue;
             }
 
@@ -227,55 +267,58 @@ qr_apply_mask(uint8_t *qrCode, int32_t qrSize, int32_t mask)
                 default: Assert(false); // unreachable
             }
             if (invert) {
-                qrCode[row * qrSize + column] = value ^ DataBlack ^ DataWhite;
+                QR_MODULE_COLOR(qr, row, column) = !value.color;
             }
         }
     }
 }
 
 void
-qr_draw_format_bits(uint8_t *qrCode, int32_t qrSize, ErrorCorrectionLevel level, int32_t mask)
+qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
 {
     uint32_t formatBits = FormatBits[level][mask];
     int32_t bitIndex = 0;
-    for (int32_t row = 0; row < qrSize; row++) {
+    for (int32_t row = 0; row < qr->size; row++) {
         if (row == 6) {
             row++; // skip timing pattern module
         }
         else if (row == 9) {
-            row = qrSize - 7; // skip to the opposite side
+            row = qr->size - 7; // skip to the opposite side
         }
-        qr_draw_module(qrCode, qrSize, row, 8, ((formatBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite);
+        draw_module(qr, row, 8, ((formatBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite);
         bitIndex++;
     }
 
     bitIndex = 14;
-    for (int32_t column = 0; column < qrSize; column++) {
+    for (int32_t column = 0; column < qr->size; column++) {
         if (column == 6) {
             column++; // skip timing pattern module
         }
         else if (column == 9) {
-            column = qrSize - 8; // skip to the opposite side
+            column = qr->size - 8; // skip to the opposite side
             bitIndex++;
         }
-        qr_draw_module(qrCode, qrSize, 8, column, ((formatBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite);
+        draw_module(qr, 8, column, ((formatBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite);
         bitIndex--;
     }
 }
 
 void
-qr_draw_version_bits(uint8_t *qrCode, int32_t qrSize, int32_t version)
+qr_draw_version_modules(QR *qr, int32_t version)
 {
-    Assert(version > 5 && version <= MaxVersion);
+    Assert(MinVersion <= version && version <= MaxVersion);
 
+    if (version < 6) {
+        return;
+    }
     uint32_t versionBits = VersionBits[version];
     int32_t bitIndex = 0;
 
     for (int32_t i = 0; i < 6; i++) {
         for (int32_t j = 0; j < 3; j++) {
             ModuleValue value = ((versionBits >> bitIndex) & 1) ? FunctionalBlack : FunctionalWhite;
-            qr_draw_module(qrCode, qrSize, i, qrSize - 11 + j, value);
-            qr_draw_module(qrCode, qrSize, qrSize - 11 + j, i, value);
+            draw_module(qr, i, qr->size - 11 + j, value);
+            draw_module(qr, qr->size - 11 + j, i, value);
             bitIndex++;
         }
     }

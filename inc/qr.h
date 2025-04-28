@@ -11,6 +11,11 @@
 #define MaxBlocksCount 81
 #define MaxBlocksLength 153
 
+#define MaxModuleCount 31329 // = 177 * 177
+
+#define ColorWhite false
+#define ColorBlack true
+
 #define AlignmentCoordinatesCount 7
 
 #define MaskCount 8
@@ -51,14 +56,26 @@ static const char *const ErrorCorrectionLevelNames[ErrorCorrectionLevelCount] = 
     "High",
 };
 
-typedef uint8_t ModuleValue;
-enum ModuleValue
+typedef uint8_t ModuleType;
+enum ModuleType
 {
-    ModuleNone,
-    DataWhite,
-    DataBlack,
-    FunctionalWhite,
-    FunctionalBlack,
+    TypeNone,
+    TypeData,
+    TypeFunctional,
+};
+
+typedef struct ModuleValue ModuleValue;
+struct ModuleValue
+{
+    ModuleType type;
+    bool color;
+};
+
+typedef struct QR QR;
+struct QR
+{
+    ModuleValue modules[MaxModuleCount];
+    int32_t size;
 };
 
 // Maximum length of the encoded text.
@@ -298,66 +315,17 @@ static const uint32_t VersionBits[VersionCount]= {
     0b101000110001101001,
 };
 
-int32_t qr_calc_data_codewords_count(int32_t version,
-                                     ErrorCorrectionLevel level);
-int32_t qr_find_first_unmatch_index(const char *text,
-                                    int32_t textCharCount,
-                                    char *charsToMatch,
-                                    int32_t offset);
-EncodingMode qr_get_encoding_mode(const char *text,
-                                  int32_t textCharCount);
-int32_t qr_get_version(EncodingMode mode,
-                       ErrorCorrectionLevel level,
-                       int32_t textCharCount);
-void qr_draw_module(uint8_t *qrCode,
-                    int32_t qrSize,
-                    int32_t row,
-                    int32_t column,
-                    ModuleValue value);
-void qr_draw_rectangle(uint8_t *qrCode,
-                       int32_t qrSize,
-                       int32_t row,
-                       int32_t column,
-                       int32_t width,
-                       int32_t height,
-                       ModuleValue value);
-void qr_draw_square(uint8_t *qrCode,
-                    int32_t qrSize,
-                    int32_t row,
-                    int32_t column,
-                    int32_t size,
-                    ModuleValue value);
-void qr_draw_finder_pattern(uint8_t *qrCode,
-                            int32_t qrSize,
-                            int32_t row,
-                            int32_t column);
-void qr_draw_finder_patterns(uint8_t *qrCode,
-                             int32_t qrSize);
-void qr_draw_alignment_pattern(uint8_t *qrCode,
-                               int32_t qrSize,
-                               int32_t row,
-                               int32_t column);
-void qr_draw_alignment_patterns(uint8_t *qrCode,
-                                int32_t qrSize,
-                                int32_t version);
-void qr_draw_timing_patterns(uint8_t *qrCode,
-                             int32_t qrSize);
-void qr_draw_data(uint8_t *qrCode,
-                  int32_t qrSize,
-                  uint8_t *codewords,
-                  int32_t codewordsCount);
-void qr_print(FILE *out,
-              uint8_t *qrCode,
-              int32_t qrSize);
-void qr_apply_mask(uint8_t *qrCode,
-                   int32_t qrSize,
-                   int32_t mask);
-void qr_draw_format_bits(uint8_t *qrCode,
-                         int32_t qrSize,
-                         ErrorCorrectionLevel level,
-                         int32_t mask);
-void qr_draw_version_bits(uint8_t *qrCode,
-                          int32_t qrSize,
-                          int32_t version);
+int32_t qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level);
+int32_t qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset);
+EncodingMode qr_get_encoding_mode(const char *text, int32_t textCharCount);
+int32_t qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount);
+void qr_draw_functional_patterns(QR *qr, int32_t version);
+void qr_reserve_format_modules(QR *qr);
+void qr_reserve_version_modules(QR *qr, int32_t version);
+void qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount);
+void qr_apply_mask(QR *qr, int32_t mask);
+void qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask);
+void qr_draw_version_modules(QR *qr, int32_t version);
+void qr_print(FILE *out, QR *qr);
 
 #endif //QR_H

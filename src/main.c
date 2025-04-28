@@ -278,74 +278,57 @@ main(int32_t argc, char **argv)
 
 
     // 5. Draw functional QR patterns
-    uint8_t qrCode[177 * 177] = {0};
-    int32_t qrSize = 4 * version + 21;
+    QR qr = { .size = 4 * version + 21 };
 
-    qr_draw_finder_patterns(qrCode, qrSize);
-    qr_draw_alignment_patterns(qrCode, qrSize, version);
-    qr_draw_timing_patterns(qrCode, qrSize);
-    qr_draw_module(qrCode, qrSize, 4 * version + 13, 8, FunctionalBlack); // dark module
+    qr_draw_functional_patterns(&qr, version);
 
     if (args.verbose) {
         printf("Drawing functional patterns complete:\n");
-        qr_print(stdout, qrCode, qrSize);
+        qr_print(stdout, &qr);
     }
 
 
     // 6. Reserve format & version modules
-    // Vertical format modules
-    qr_draw_rectangle(qrCode, qrSize, 0, 8, 1, 6, FunctionalBlack);
-    qr_draw_rectangle(qrCode, qrSize, 7, 8, 1, 2, FunctionalBlack);
-    qr_draw_rectangle(qrCode, qrSize, qrSize - 7, 8, 1, 8, FunctionalBlack);
-    // Horizontal format modules
-    qr_draw_rectangle(qrCode, qrSize, 8, 0, 6, 1, FunctionalBlack);
-    qr_draw_rectangle(qrCode, qrSize, 8, 7, 2, 1, FunctionalBlack);
-    qr_draw_rectangle(qrCode, qrSize, 8, qrSize - 8, 8, 1, FunctionalBlack);
-
-    if (version > 5) {
-        // Reserve version modules
-        qr_draw_rectangle(qrCode, qrSize, 0, qrSize - 11, 3, 6, FunctionalBlack);
-        qr_draw_rectangle(qrCode, qrSize, qrSize - 11, 0, 6, 3, FunctionalBlack);
-    }
+    qr_reserve_format_modules(&qr);
+    qr_reserve_version_modules(&qr, version);
 
     if (args.verbose) {
         printf("Reserving format & version modules complete:\n");
-        qr_print(stdout, qrCode, qrSize);
+        qr_print(stdout, &qr);
     }
 
 
     // 7. Draw QR data
-    qr_draw_data(qrCode, qrSize, interleavedCodewords, interleavedCodewordsCount);
+    qr_draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
 
     if (args.verbose) {
         printf("Drawing QR data complete:\n");
-        qr_print(stdout, qrCode, qrSize);
+        qr_print(stdout, &qr);
     }
 
 
     // 8. Apply data masking
     int32_t mask = 0; //TODO calc best mask
-    qr_apply_mask(qrCode, qrSize, mask);
+    qr_apply_mask(&qr, mask);
 
     if (args.verbose) {
         printf("Applying data masking complete:\n");
-        qr_print(stdout, qrCode, qrSize);
+        qr_print(stdout, &qr);
     }
 
 
     // 9. Draw QR format and version
-    qr_draw_format_bits(qrCode, qrSize, level, mask);
-    if (version > 5) {
-        qr_draw_version_bits(qrCode, qrSize, version);
-    }
+    qr_draw_format_modules(&qr, level, mask);
+    qr_draw_version_modules(&qr, version);
 
     if (args.verbose) {
         printf("Drawing format & version modules complete:\n");
-        qr_print(stdout, qrCode, qrSize);
+        qr_print(stdout, &qr);
     }
 
+
     printf("\n");
-    qr_print(stdout, qrCode, qrSize);
+    qr_print(stdout, &qr);
     printf("\n");
 
     return 0;

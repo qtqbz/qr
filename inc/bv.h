@@ -13,8 +13,6 @@ struct BitVec
 };
 
 void bv_print(FILE *out, BitVec bv);
-void bv_append(BitVec *bv,
-               uint64_t bits,
-               int32_t bitsCount);
+void bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount);
 
 #endif //BV_H
