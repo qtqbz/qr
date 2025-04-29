@@ -11,7 +11,7 @@
 #define MaxBlocksCount 81
 #define MaxBlocksLength 153
 
-#define MaxModuleCount 31329 // = 177 * 177
+#define MaxModuleCount 31329 // = (4 × MaxVersion + 21) * (4 × MaxVersion + 21)
 
 #define AlignmentCoordinatesCount 7
 
@@ -327,6 +327,7 @@ void qr_reserve_format_modules(QR *qr);
 void qr_reserve_version_modules(QR *qr, int32_t version);
 void qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount);
 void qr_apply_mask(QR *qr, int32_t mask);
+int32_t qr_calc_mask_penalty(QR *qr);
 void qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask);
 void qr_draw_version_modules(QR *qr, int32_t version);
 void qr_print(FILE *out, QR *qr);

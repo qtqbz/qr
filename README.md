@@ -18,6 +18,5 @@ $ make build
 
 ### TODO:
 - Support kenji 
-- Support all masks and choose the best
 - Add tests
 - Use SIMD

@@ -308,17 +308,32 @@ main(int32_t argc, char **argv)
 
 
     // 8. Apply data masking
-    int32_t mask = 0; //TODO calc best mask
-    qr_apply_mask(&qr, mask);
+    int32_t minPenalty = INT32_MAX;
+    int32_t bestMask = 2;
+    for (int32_t mask = 0; mask < MaskCount; mask++) {
+        qr_draw_format_modules(&qr, level, mask);
+        qr_draw_version_modules(&qr, version);
+        qr_apply_mask(&qr, mask);
+
+        int32_t penalty = qr_calc_mask_penalty(&qr);
+        if (penalty < minPenalty) {
+            minPenalty = penalty;
+            bestMask = mask;
+        }
+
+        // re-applying reverts the mask
+        qr_apply_mask(&qr, mask);
+    }
+    qr_apply_mask(&qr, bestMask);
 
     if (args.verbose) {
-        printf("Applying data masking complete:\n");
+        printf("Applying data mask %d complete:\n", bestMask);
         qr_print(stdout, &qr);
     }
 
 
     // 9. Draw QR format and version
-    qr_draw_format_modules(&qr, level, mask);
+    qr_draw_format_modules(&qr, level, bestMask);
     qr_draw_version_modules(&qr, version);
 
     if (args.verbose) {

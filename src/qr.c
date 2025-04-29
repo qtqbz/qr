@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "qr.h"
@@ -256,14 +257,14 @@ qr_apply_mask(QR *qr, int32_t mask)
 
             bool invert = false;
             switch (mask) {
-                case 0: invert = (row + column) % 2 == 0; break;
-                case 1: invert = column % 2 == 0; break;
-                case 2: invert = row % 3 == 0; break;
-                case 3: invert = (row + column) % 3 == 0; break;
-                case 4: invert = (row / 3 + column / 2) % 2 == 0; break;
-                case 5: invert = row * column % 2 + row * column % 3 == 0; break;
-                case 6: invert = (row * column % 2 + row * column % 3) % 2 == 0; break;
-                case 7: invert = ((row + column) % 2 + row * column % 3) % 2 == 0; break;
+                case 0: invert = ((row + column) % 2) == 0; break;
+                case 1: invert = (row % 2) == 0; break;
+                case 2: invert = (column % 3) == 0; break;
+                case 3: invert = ((row + column) % 3) == 0; break;
+                case 4: invert = ((row / 2 + column / 3) % 2) == 0; break;
+                case 5: invert = ((row * column) % 2) + ((row * column) % 3) == 0; break;
+                case 6: invert = (((row * column) % 2) + ((row * column) % 3) % 2) == 0; break;
+                case 7: invert = (((row + column) % 2) + ((row * column) % 3) % 2) == 0; break;
                 default: Assert(false); // unreachable
             }
             if (invert) {
@@ -271,6 +272,151 @@ qr_apply_mask(QR *qr, int32_t mask)
             }
         }
     }
+}
+
+static int32_t
+calc_rule1_penalty(QR *qr)
+{
+    int32_t penalty = 0;
+    for (int32_t row = 0; row < qr->size; row++) {
+        int32_t count = 1;
+        ModuleColor prevColor = QR_MODULE_COLOR(qr, row, 0);
+        for (int32_t column = 1; column < qr->size; column++) {
+            ModuleColor color = QR_MODULE_COLOR(qr, row, column);
+            if (color == prevColor) {
+                count++;
+                if (count == 5) {
+                    penalty += 3;
+                } else if (count > 5) {
+                    penalty++;
+                }
+            } else {
+                prevColor = color;
+                count = 1;
+            }
+        }
+    }
+    for (int32_t column = 0; column < qr->size; column++) {
+        int32_t count = 1;
+        ModuleColor prevColor = QR_MODULE_COLOR(qr, 0, column);
+        for (int32_t row = 1; row < qr->size; row++) {
+            ModuleColor color = QR_MODULE_COLOR(qr, row, column);
+            if (color == prevColor) {
+                count++;
+                if (count == 5) {
+                    penalty += 3;
+                } else if (count > 5) {
+                    penalty++;
+                }
+            } else {
+                prevColor = color;
+                count = 1;
+            }
+        }
+    }
+    return penalty;
+}
+
+static int32_t
+calc_rule2_penalty(QR *qr)
+{
+    int32_t penalty = 0;
+    for (int32_t row = 0; row < qr->size - 1; row++) {
+        for (int32_t column = 0; column < qr->size - 1; column++) {
+            ModuleColor color1 = QR_MODULE_COLOR(qr, row + 0, column + 0);
+            ModuleColor color2 = QR_MODULE_COLOR(qr, row + 0, column + 1);
+            ModuleColor color3 = QR_MODULE_COLOR(qr, row + 1, column + 0);
+            ModuleColor color4 = QR_MODULE_COLOR(qr, row + 1, column + 1);
+            if ((color1 == color2) && (color2 == color3) && (color3 == color4)) {
+                penalty += 3;
+            }
+        }
+    }
+    return penalty;
+}
+
+static int32_t
+calc_rule3_penalty(QR *qr)
+{
+    int32_t penalty = 0;
+    for (int32_t row = 0; row < qr->size; row++) {
+        for (int32_t column = 0; column < qr->size - 7; column++) {
+            if ((QR_MODULE_COLOR(qr, row, column + 0) == 1)
+                && (QR_MODULE_COLOR(qr, row, column + 1) == 0)
+                && (QR_MODULE_COLOR(qr, row, column + 2) == 1)
+                && (QR_MODULE_COLOR(qr, row, column + 3) == 1)
+                && (QR_MODULE_COLOR(qr, row, column + 4) == 1)
+                && (QR_MODULE_COLOR(qr, row, column + 5) == 0)
+                && (QR_MODULE_COLOR(qr, row, column + 6) == 1)) {
+                uint32_t preWhiteModuleCount = 0;
+                uint32_t postWhiteModuleCount = 0;
+                for (int32_t i = 1; i <= 4; i++) {
+                    if (((column - i) < 0) || (QR_MODULE_COLOR(qr, row, column - i) == ColorWhite)) {
+                        preWhiteModuleCount++;
+                    }
+                    if (((column + 6 + i) >= qr->size) || (QR_MODULE_COLOR(qr, row, column + 6 + i) == ColorWhite)) {
+                        postWhiteModuleCount++;
+                    }
+                }
+                if ((preWhiteModuleCount == 4) || (postWhiteModuleCount == 4)) {
+                    penalty += 40;
+                }
+            }
+        }
+    }
+    for (int32_t column = 0; column < qr->size; column++) {
+        for (int32_t row = 0; row < qr->size - 7; row++) {
+            if ((QR_MODULE_COLOR(qr, row + 0, column) == 1)
+                && (QR_MODULE_COLOR(qr, row + 1, column) == 0)
+                && (QR_MODULE_COLOR(qr, row + 2, column) == 1)
+                && (QR_MODULE_COLOR(qr, row + 3, column) == 1)
+                && (QR_MODULE_COLOR(qr, row + 4, column) == 1)
+                && (QR_MODULE_COLOR(qr, row + 5, column) == 0)
+                && (QR_MODULE_COLOR(qr, row + 6, column) == 1)) {
+                uint32_t preWhiteModuleCount = 0;
+                uint32_t postWhiteModuleCount = 0;
+                for (int32_t i = 1; i <= 4; i++) {
+                    if (((row - i) < 0) || (QR_MODULE_COLOR(qr, row - i, column) == ColorWhite)) {
+                        preWhiteModuleCount++;
+                    }
+                    if (((row + 6 + i) >= qr->size) || (QR_MODULE_COLOR(qr, row + 6 + i, column) == ColorWhite)) {
+                        postWhiteModuleCount++;
+                    }
+                }
+                if ((preWhiteModuleCount == 4) || (postWhiteModuleCount == 4)) {
+                    penalty += 40;
+                }
+            }
+        }
+    }
+    return penalty;
+}
+
+static int32_t
+calc_rule4_penalty(QR *qr)
+{
+    int32_t totalModuleCount = qr->size * qr->size;
+    int32_t blackModuleCount = 0;
+    for (int32_t row = 0; row < qr->size; row++) {
+        for (int32_t column = 0; column < qr->size - 11; column++) {
+            if (QR_MODULE_COLOR(qr, row, column) == ColorBlack) {
+                blackModuleCount++;
+            }
+        }
+    }
+    int32_t fivePercentVariances = abs(blackModuleCount * 2 - totalModuleCount) * 10 / totalModuleCount;
+    int32_t penalty = fivePercentVariances * 10;
+    return penalty;
+}
+
+int32_t
+qr_calc_mask_penalty(QR *qr)
+{
+    int32_t penalty1 = calc_rule1_penalty(qr);
+    int32_t penalty2 = calc_rule2_penalty(qr);
+    int32_t penalty3 = calc_rule3_penalty(qr);
+    int32_t penalty4 = calc_rule4_penalty(qr);
+    return penalty1 + penalty2 + penalty3 + penalty4;
 }
 
 void
