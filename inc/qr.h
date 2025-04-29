@@ -13,9 +13,6 @@
 
 #define MaxModuleCount 31329 // = 177 * 177
 
-#define ColorWhite false
-#define ColorBlack true
-
 #define AlignmentCoordinatesCount 7
 
 #define MaskCount 8
@@ -56,7 +53,7 @@ static const char *const ErrorCorrectionLevelNames[ErrorCorrectionLevelCount] = 
     "High",
 };
 
-typedef uint8_t ModuleType;
+typedef uint32_t ModuleType;
 enum ModuleType
 {
     TypeNone,
@@ -64,11 +61,18 @@ enum ModuleType
     TypeFunctional,
 };
 
+typedef uint32_t ModuleColor;
+enum ModuleColor
+{
+    ColorWhite,
+    ColorBlack,
+};
+
 typedef struct ModuleValue ModuleValue;
 struct ModuleValue
 {
     ModuleType type;
-    bool color;
+    ModuleColor color;
 };
 
 typedef struct QR QR;
@@ -316,7 +320,6 @@ static const uint32_t VersionBits[VersionCount]= {
 };
 
 int32_t qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level);
-int32_t qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset);
 EncodingMode qr_get_encoding_mode(const char *text, int32_t textCharCount);
 int32_t qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount);
 void qr_draw_functional_patterns(QR *qr, int32_t version);

@@ -22,8 +22,8 @@ qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
     return dataCodewordsCount;
 }
 
-int32_t
-qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset)
+static int32_t
+find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset)
 {
     for (int32_t i = offset; i < textCharCount; i++) {
         char ch = text[i];
@@ -37,11 +37,11 @@ qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *chars
 EncodingMode
 qr_get_encoding_mode(const char *text, int32_t textCharCount)
 {
-    int32_t i = qr_find_first_unmatch_index(text, textCharCount, "0123456789", 0);
+    int32_t i = find_first_unmatch_index(text, textCharCount, "0123456789", 0);
     if (i < 0) {
         return Numeric;
     }
-    i = qr_find_first_unmatch_index(text, textCharCount, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
+    i = find_first_unmatch_index(text, textCharCount, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
     if (i < 0) {
         return Alphanumeric;
     }
@@ -140,7 +140,7 @@ draw_timing_patterns(QR *qr)
     for (int32_t i = 8; i < (qr->size - 7); i++) {
         draw_module(qr, 6, i, value);
         draw_module(qr, i, 6, value);
-        value.color = !value.color;
+        value.color = (value.color == ColorWhite) ? ColorBlack : ColorWhite;
     }
 }
 
@@ -267,7 +267,7 @@ qr_apply_mask(QR *qr, int32_t mask)
                 default: Assert(false); // unreachable
             }
             if (invert) {
-                QR_MODULE_COLOR(qr, row, column) = !value.color;
+                QR_MODULE_COLOR(qr, row, column) = (value.color == ColorWhite) ? ColorBlack : ColorWhite;
             }
         }
     }
