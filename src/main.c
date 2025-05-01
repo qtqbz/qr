@@ -1,11 +1,12 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "qr.h"
-#include "bv.h"
-#include "gf256.h"
-#include "utils.h"
+#include "utils.c"
+#include "qr.c"
+#include "bv.c"
+#include "gf256.c"
 
 typedef struct CommandLineArguments CommandLineArguments;
 struct CommandLineArguments
@@ -29,7 +30,7 @@ parse_args(int32_t argc, char **argv)
         print_usage(argv[0]);
         exit(1);
     }
-    CommandLineArguments args = {0};
+    CommandLineArguments args = {};
 
     for (int32_t i = 1; i < argc - 1; i++) {
         if (argv[i][0] != '-') {
@@ -59,12 +60,12 @@ int32_t
 main(int32_t argc, char **argv)
 {
     CommandLineArguments args = parse_args(argc, argv);
-    Assert(args.text != NULL);
+    ASSERT(args.text != NULL);
 
     const char *text = args.text;
     int32_t textCharCount = (int32_t)strlen(text);
     // If not specified, use the lowest error correction level
-    ErrorCorrectionLevel level = Low;
+    ErrorCorrectionLevel level = ECL_LOW;
 
     if (args.verbose) {
         printf("Generating QR:\n"
@@ -82,14 +83,14 @@ main(int32_t argc, char **argv)
     EncodingMode mode = qr_get_encoding_mode(text, textCharCount);
     // Infer QR version
     int32_t version = qr_get_version(mode, level, textCharCount);
-    if (version == VersionInvalid) {
+    if (version == VERSION_INVALID) {
         fprintf(stderr, "Text too long, can't fit into any QR code version\n");
         exit(1);
     }
 
     // If possible, increase the error correction level while still staying in the same version
-    for (ErrorCorrectionLevel newLevel = level + 1; newLevel <= High; level = newLevel++) {
-        if (textCharCount > MaxCharCount[mode][newLevel][version]) {
+    for (ErrorCorrectionLevel newLevel = level + 1; newLevel <= ECL_HIGH; level = newLevel++) {
+        if (textCharCount > MAX_CHAR_COUNT[mode][newLevel][version]) {
             break;
         }
     }
@@ -106,17 +107,17 @@ main(int32_t argc, char **argv)
 
 
     // 2. Data Encoding
-    BitVec bv = {0};
+    BitVec bv = {};
 
     // Encoding mode
     bv_append(&bv, (1U) << mode, 4);
 
     // Text length
-    int32_t lengthBitCount = LengthBitsCount[mode][version];
+    int32_t lengthBitCount = LENGTH_BITS_COUNT[mode][version];
     bv_append(&bv, textCharCount, lengthBitCount);
 
     // Text itself
-    if (mode == Numeric) {
+    if (mode == EM_NUMERIC) {
         int32_t number = 0;
         for (int32_t i = 0; i < textCharCount; i++) {
             uint8_t ch = text[i];
@@ -128,7 +129,7 @@ main(int32_t argc, char **argv)
             }
         }
     }
-    else if (mode == Alphanumeric) {
+    else if (mode == EM_ALPHANUM) {
         int32_t number = 0;
         for (int32_t i = 0; i < textCharCount; i++) {
             uint8_t ch = text[i];
@@ -145,7 +146,7 @@ main(int32_t argc, char **argv)
             else if (ch == '.') addend = 42;
             else if (ch == '/') addend = 43;
             else if (ch == ':') addend = 44;
-            else Assert(false); // unreachable
+            else ASSERT(false); // unreachable
 
             number = number * 45 + addend;
             if (((i % 2) == 1) || (i == (textCharCount - 1))) {
@@ -164,7 +165,7 @@ main(int32_t argc, char **argv)
     int32_t dataModulesCount = dataCodewordsCount * 8;
 
     // Terminator zeros
-    int32_t terminatorLength = Min(dataModulesCount - bv.size, 4);
+    int32_t terminatorLength = MIN(dataModulesCount - bv.size, 4);
     bv_append(&bv, 0, terminatorLength);
 
     // Zero padding for 8 bit alignment
@@ -185,21 +186,21 @@ main(int32_t argc, char **argv)
 
 
     // 3. Error correction coding
-    uint8_t blocks[MaxBlocksCount][MaxBlocksLength] = {0};
+    uint8_t blocks[MAX_BLOCKS_COUNT][MAX_BLOCKS_LENGTH] = {};
 
     // Divide data codewords into blocks and calculate error correction codewords for them
     uint8_t *dataCodewords = bv.bytes;
-    int32_t contentCodewordsCount = ContentModulesCount[version] / 8;
+    int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
 
-    int32_t blocksCount = ErrorCorrectionBlocksCount[level][version];
-    Assert(blocksCount <= MaxBlocksCount);
+    int32_t blocksCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version];
+    ASSERT(blocksCount <= MAX_BLOCKS_COUNT);
 
     int32_t shortBlocksCount = blocksCount - (contentCodewordsCount % blocksCount);
     int32_t shortBlockLength = contentCodewordsCount / blocksCount;
-    Assert(shortBlockLength <= MaxBlocksLength);
+    ASSERT(shortBlockLength <= MAX_BLOCKS_LENGTH);
 
-    int32_t errorCodewordsPerBlockCount = ErrorCorrectionCodewordsPerBlockCount[level][version];
-    const uint8_t *divisor = GenPoly[errorCodewordsPerBlockCount];
+    int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
+    const uint8_t *divisor = GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
 
     int32_t dataCodewordsIndex = 0;
     for (int32_t i = 0; i < blocksCount; i++) {
@@ -219,28 +220,28 @@ main(int32_t argc, char **argv)
         }
 
         // Calculate error correcting codewords
-        uint8_t errorCodewords[MaxPolygonDegree + 1] = {0};
-        int32_t remainderLength = gf256_poly_divide(block,
+        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + 1] = {};
+        int32_t remainderLength = gf256_polynom_divide(block,
                                                     currBlockLength,
                                                     divisor,
                                                     errorCodewordsPerBlockCount + 1,
                                                     errorCodewords);
-        Assert(remainderLength == errorCodewordsPerBlockCount);
+        ASSERT(remainderLength == errorCodewordsPerBlockCount);
 
         if (args.verbose) {
             printf("   data[%3d]: ", currBlockLength);
-            for (int32_t i = 0; i < currBlockLength; i++) {
-                printf("%4d, ", block[i]);
+            for (int32_t j = 0; j < currBlockLength; j++) {
+                printf("%4d, ", block[j]);
             }
             printf("\n");
             printf("divisor[%3d]: ", errorCodewordsPerBlockCount + 1);
-            for (int32_t i = 0; i < errorCodewordsPerBlockCount + 1; i++) {
-                printf("%4d, ", divisor[i]);
+            for (int32_t j = 0; j < errorCodewordsPerBlockCount + 1; j++) {
+                printf("%4d, ", divisor[j]);
             }
             printf("\n");
             printf(" result[%3d]: ", errorCodewordsPerBlockCount);
-            for (int32_t i = 0; i < errorCodewordsPerBlockCount; i++) {
-                printf("%4d, ", errorCodewords[i]);
+            for (int32_t j = 0; j < errorCodewordsPerBlockCount; j++) {
+                printf("%4d, ", errorCodewords[j]);
             }
             printf("\n");
             printf("\n");
@@ -255,7 +256,7 @@ main(int32_t argc, char **argv)
 
 
     // 4. Codeword interleaving
-    uint8_t interleavedCodewords[MaxBlocksCount * MaxBlocksLength] = {0};
+    uint8_t interleavedCodewords[MAX_BLOCKS_COUNT * MAX_BLOCKS_LENGTH] = {};
     int32_t interleavedCodewordsCount = 0;
     for (int32_t i = 0; i < (shortBlockLength + 1); i++) {
         for (int32_t j = 0; j < blocksCount; j++) {
@@ -310,7 +311,7 @@ main(int32_t argc, char **argv)
     // 8. Apply data masking
     int32_t minPenalty = INT32_MAX;
     int32_t bestMask = 2;
-    for (int32_t mask = 0; mask < MaskCount; mask++) {
+    for (int32_t mask = 0; mask < MASK_COUNT; mask++) {
         qr_draw_format_modules(&qr, level, mask);
         qr_draw_version_modules(&qr, version);
         qr_apply_mask(&qr, mask);
