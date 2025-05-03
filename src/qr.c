@@ -258,7 +258,7 @@ static const uint32_t VERSION_BITS[VERSION_COUNT]= {
 };
 
 static int32_t
-qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
+calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 {
     int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
     int32_t errorCorrectionCodewordsCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version]
@@ -268,7 +268,7 @@ qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 }
 
 static int32_t
-qr_find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int32_t offset)
+find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int32_t offset)
 {
     for (int32_t i = offset; i < textLen; i++) {
         char ch = text[i];
@@ -280,13 +280,13 @@ qr_find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int
 }
 
 static EncodingMode
-qr_get_encoding_mode(char *text, int32_t textLen)
+get_encoding_mode(char *text, int32_t textLen)
 {
-    int32_t i = qr_find_first_unmatch_index(text, textLen, "0123456789", 0);
+    int32_t i = find_first_unmatch_index(text, textLen, "0123456789", 0);
     if (i < 0) {
         return EM_NUMERIC;
     }
-    i = qr_find_first_unmatch_index(text, textLen, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
+    i = find_first_unmatch_index(text, textLen, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
     if (i < 0) {
         return EM_ALPHANUM;
     }
@@ -294,7 +294,7 @@ qr_get_encoding_mode(char *text, int32_t textLen)
 }
 
 static int32_t
-qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount)
+get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount)
 {
     for (int32_t version = MIN_VERSION; version <= MAX_VERSION; version++) {
         if (textCharCount <= MAX_CHAR_COUNT[mode][level][version]) {
@@ -305,7 +305,7 @@ qr_get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCo
 }
 
 static void
-qr_draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
+draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
 {
     if ((0 <= row && row < qr->size) && (0 <= column && column < qr->size)) {
         QR_MODULE_VALUE(qr, row, column) = value;
@@ -313,48 +313,48 @@ qr_draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
 }
 
 static void
-qr_draw_rectangle(QR *qr, int32_t row, int32_t column, int32_t width, int32_t height, ModuleValue value)
+draw_rectangle(QR *qr, int32_t row, int32_t column, int32_t width, int32_t height, ModuleValue value)
 {
     for (int32_t i = 0; i < height; i++) {
         for (int32_t j = 0; j < width; j++) {
-            qr_draw_module(qr, row + i, column + j, value);
+            draw_module(qr, row + i, column + j, value);
         }
     }
 }
 
 static void
-qr_draw_square(QR *qr, int32_t row, int32_t column, int32_t size, ModuleValue value)
+draw_square(QR *qr, int32_t row, int32_t column, int32_t size, ModuleValue value)
 {
-    qr_draw_rectangle(qr, row, column, size, size, value);
+    draw_rectangle(qr, row, column, size, size, value);
 }
 
 static void
-qr_draw_finder_pattern(QR *qr, int32_t row, int32_t column)
+draw_finder_pattern(QR *qr, int32_t row, int32_t column)
 {
-    qr_draw_square(qr, row - 1, column - 1, 9, FUNCTIONAL_WHITE); // separator
-    qr_draw_square(qr, row + 0, column + 0, 7, FUNCTIONAL_BLACK);
-    qr_draw_square(qr, row + 1, column + 1, 5, FUNCTIONAL_WHITE);
-    qr_draw_square(qr, row + 2, column + 2, 3, FUNCTIONAL_BLACK);
+    draw_square(qr, row - 1, column - 1, 9, FUNCTIONAL_WHITE); // separator
+    draw_square(qr, row + 0, column + 0, 7, FUNCTIONAL_BLACK);
+    draw_square(qr, row + 1, column + 1, 5, FUNCTIONAL_WHITE);
+    draw_square(qr, row + 2, column + 2, 3, FUNCTIONAL_BLACK);
 }
 
 static void
-qr_draw_finder_patterns(QR *qr)
+draw_finder_patterns(QR *qr)
 {
-    qr_draw_finder_pattern(qr, 0, 0);
-    qr_draw_finder_pattern(qr, 0, qr->size - 7);
-    qr_draw_finder_pattern(qr, qr->size - 7, 0);
+    draw_finder_pattern(qr, 0, 0);
+    draw_finder_pattern(qr, 0, qr->size - 7);
+    draw_finder_pattern(qr, qr->size - 7, 0);
 }
 
 static void
-qr_draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
+draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
 {
-    qr_draw_square(qr, row + 0, column + 0, 5, FUNCTIONAL_BLACK);
-    qr_draw_square(qr, row + 1, column + 1, 3, FUNCTIONAL_WHITE);
-    qr_draw_module(qr, row + 2, column + 2, FUNCTIONAL_BLACK);
+    draw_square(qr, row + 0, column + 0, 5, FUNCTIONAL_BLACK);
+    draw_square(qr, row + 1, column + 1, 3, FUNCTIONAL_WHITE);
+    draw_module(qr, row + 2, column + 2, FUNCTIONAL_BLACK);
 }
 
 static void
-qr_draw_alignment_patterns(QR *qr, int32_t version)
+draw_alignment_patterns(QR *qr, int32_t version)
 {
     for (int32_t i = 0; i < ALIGNMENT_COORDINATES_COUNT; i++) {
         int32_t rowCenter = ALIGNMENT_COORDINATES[version][i];
@@ -372,61 +372,61 @@ qr_draw_alignment_patterns(QR *qr, int32_t version)
                 && QR_MODULE_TYPE(qr, rowCenter + 2, columnCenter + 2) == MT_NONE) {
                 int32_t row = rowCenter - 2;
                 int32_t column = columnCenter - 2;
-                qr_draw_alignment_pattern(qr, row, column);
+                draw_alignment_pattern(qr, row, column);
             }
         }
     }
 }
 
 static void
-qr_draw_timing_patterns(QR *qr)
+draw_timing_patterns(QR *qr)
 {
     ModuleValue value = FUNCTIONAL_BLACK;
     for (int32_t i = 8; i < (qr->size - 7); i++) {
-        qr_draw_module(qr, 6, i, value);
-        qr_draw_module(qr, i, 6, value);
+        draw_module(qr, 6, i, value);
+        draw_module(qr, i, 6, value);
         value.color = (value.color == MC_WHITE) ? MC_BLACK : MC_WHITE;
     }
 }
 
 static void
-qr_draw_functional_patterns(QR *qr, int32_t version)
+draw_functional_patterns(QR *qr, int32_t version)
 {
-    qr_draw_finder_patterns(qr);
-    qr_draw_alignment_patterns(qr, version);
-    qr_draw_timing_patterns(qr);
-    qr_draw_module(qr, 4 * version + 13, 8, FUNCTIONAL_BLACK); // dark module
+    draw_finder_patterns(qr);
+    draw_alignment_patterns(qr, version);
+    draw_timing_patterns(qr);
+    draw_module(qr, 4 * version + 13, 8, FUNCTIONAL_BLACK); // dark module
 }
 
 static void
-qr_reserve_format_modules(QR *qr)
+reserve_format_modules(QR *qr)
 {
     // Vertical format modules
-    qr_draw_rectangle(qr, 0, 8, 1, 6, FUNCTIONAL_BLACK);
-    qr_draw_rectangle(qr, 7, 8, 1, 2, FUNCTIONAL_BLACK);
-    qr_draw_rectangle(qr, qr->size - 7, 8, 1, 8, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 0, 8, 1, 6, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 7, 8, 1, 2, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, qr->size - 7, 8, 1, 8, FUNCTIONAL_BLACK);
 
     // Horizontal format modules
-    qr_draw_rectangle(qr, 8, 0, 6, 1, FUNCTIONAL_BLACK);
-    qr_draw_rectangle(qr, 8, 7, 2, 1, FUNCTIONAL_BLACK);
-    qr_draw_rectangle(qr, 8, qr->size - 8, 8, 1, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 8, 0, 6, 1, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 8, 7, 2, 1, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 8, qr->size - 8, 8, 1, FUNCTIONAL_BLACK);
 }
 
 static void
-qr_reserve_version_modules(QR *qr, int32_t version)
+reserve_version_modules(QR *qr, int32_t version)
 {
     if (version < 6) {
         return;
     }
     // Vertical version modules
-    qr_draw_rectangle(qr, qr->size - 11, 0, 6, 3, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, qr->size - 11, 0, 6, 3, FUNCTIONAL_BLACK);
 
     // Horizontal version modules
-    qr_draw_rectangle(qr, 0, qr->size - 11, 3, 6, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 0, qr->size - 11, 3, 6, FUNCTIONAL_BLACK);
 }
 
 static void
-qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
+draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
 {
     int32_t column = qr->size - 1;
     int32_t row = qr->size - 1;
@@ -468,7 +468,7 @@ qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
 }
 
 static void
-qr_apply_mask(QR *qr, int32_t mask)
+apply_mask(QR *qr, int32_t mask)
 {
     for (int32_t row = 0; row < qr->size; row++) {
         for (int32_t column = 0; column < qr->size; column++) {
@@ -515,7 +515,7 @@ qr_apply_mask(QR *qr, int32_t mask)
 }
 
 static int32_t
-qr_calc_rule1_penalty(QR *qr)
+calc_rule1_penalty(QR *qr)
 {
     int32_t penalty = 0;
     for (int32_t row = 0; row < qr->size; row++) {
@@ -558,7 +558,7 @@ qr_calc_rule1_penalty(QR *qr)
 }
 
 static int32_t
-qr_calc_rule2_penalty(QR *qr)
+calc_rule2_penalty(QR *qr)
 {
     int32_t penalty = 0;
     for (int32_t row = 0; row < qr->size - 1; row++) {
@@ -576,7 +576,7 @@ qr_calc_rule2_penalty(QR *qr)
 }
 
 static int32_t
-qr_calc_rule3_penalty(QR *qr)
+calc_rule3_penalty(QR *qr)
 {
     int32_t penalty = 0;
     for (int32_t row = 0; row < qr->size; row++) {
@@ -633,7 +633,7 @@ qr_calc_rule3_penalty(QR *qr)
 }
 
 static int32_t
-qr_calc_rule4_penalty(QR *qr)
+calc_rule4_penalty(QR *qr)
 {
     int32_t totalModuleCount = qr->size * qr->size;
     int32_t blackModuleCount = 0;
@@ -650,17 +650,17 @@ qr_calc_rule4_penalty(QR *qr)
 }
 
 static int32_t
-qr_calc_mask_penalty(QR *qr)
+calc_mask_penalty(QR *qr)
 {
-    int32_t penalty1 = qr_calc_rule1_penalty(qr);
-    int32_t penalty2 = qr_calc_rule2_penalty(qr);
-    int32_t penalty3 = qr_calc_rule3_penalty(qr);
-    int32_t penalty4 = qr_calc_rule4_penalty(qr);
+    int32_t penalty1 = calc_rule1_penalty(qr);
+    int32_t penalty2 = calc_rule2_penalty(qr);
+    int32_t penalty3 = calc_rule3_penalty(qr);
+    int32_t penalty4 = calc_rule4_penalty(qr);
     return penalty1 + penalty2 + penalty3 + penalty4;
 }
 
 static void
-qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
+draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
 {
     uint32_t formatBits = FORMAT_BITS[level][mask];
     int32_t bitIndex = 0;
@@ -671,7 +671,7 @@ qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
         else if (row == 9) {
             row = qr->size - 7; // skip to the opposite side
         }
-        qr_draw_module(qr, row, 8, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
+        draw_module(qr, row, 8, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
         bitIndex++;
     }
 
@@ -684,13 +684,13 @@ qr_draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
             column = qr->size - 8; // skip to the opposite side
             bitIndex++;
         }
-        qr_draw_module(qr, 8, column, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
+        draw_module(qr, 8, column, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
         bitIndex--;
     }
 }
 
 static void
-qr_draw_version_modules(QR *qr, int32_t version)
+draw_version_modules(QR *qr, int32_t version)
 {
     ASSERT(MIN_VERSION <= version && version <= MAX_VERSION);
 
@@ -703,8 +703,8 @@ qr_draw_version_modules(QR *qr, int32_t version)
     for (int32_t i = 0; i < 6; i++) {
         for (int32_t j = 0; j < 3; j++) {
             ModuleValue value = ((versionBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE;
-            qr_draw_module(qr, i, qr->size - 11 + j, value);
-            qr_draw_module(qr, qr->size - 11 + j, i, value);
+            draw_module(qr, i, qr->size - 11 + j, value);
+            draw_module(qr, qr->size - 11 + j, i, value);
             bitIndex++;
         }
     }
@@ -721,11 +721,11 @@ qr_encode(QROptions *options)
     bool isDebug = options->isDebug;
 
     // 1. Data analysis.
-    EncodingMode mode = qr_get_encoding_mode(text, textLen);
+    EncodingMode mode = get_encoding_mode(text, textLen);
 
     ErrorCorrectionLevel level = (forcedLevel != LEVEL_INVALID) ? forcedLevel : ECL_LOW;
 
-    int32_t version = (forcedVersion != VERSION_INVALID) ? forcedVersion : qr_get_version(mode, level, textLen);
+    int32_t version = (forcedVersion != VERSION_INVALID) ? forcedVersion : get_version(mode, level, textLen);
     if (version == VERSION_INVALID) {
         fprintf(stderr,
                 "Failed to find a suitable version for a text of length %d "
@@ -839,7 +839,7 @@ qr_encode(QROptions *options)
         }
     }
 
-    int32_t dataCodewordsCount = qr_calc_data_codewords_count(version, level);
+    int32_t dataCodewordsCount = calc_data_codewords_count(version, level);
     int32_t dataModulesCount = dataCodewordsCount * 8;
 
     // Terminator zeros
@@ -963,7 +963,7 @@ qr_encode(QROptions *options)
     qr.level = level;
     qr.version = version;
 
-    qr_draw_functional_patterns(&qr, version);
+    draw_functional_patterns(&qr, version);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FUNCTIONAL PATTERNS\n");
@@ -973,8 +973,8 @@ qr_encode(QROptions *options)
 
 
     // 5. Reserve format & version modules
-    qr_reserve_format_modules(&qr);
-    qr_reserve_version_modules(&qr, version);
+    reserve_format_modules(&qr);
+    reserve_version_modules(&qr, version);
 
     if (isDebug) {
         fprintf(stderr, ">>> RESERVING FORMAT & VERSION MODULES\n");
@@ -984,7 +984,7 @@ qr_encode(QROptions *options)
 
 
     // 6. Draw QR data
-    qr_draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
+    draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING DATA MODULES\n");
@@ -998,24 +998,24 @@ qr_encode(QROptions *options)
     int32_t bestMask = 0;
     if (forcedMask == MASK_INVALID) {
         for (int32_t mask = 0; mask < MASK_COUNT; mask++) {
-            qr_draw_format_modules(&qr, level, mask);
-            qr_draw_version_modules(&qr, version);
-            qr_apply_mask(&qr, mask);
+            draw_format_modules(&qr, level, mask);
+            draw_version_modules(&qr, version);
+            apply_mask(&qr, mask);
 
-            int32_t penalty = qr_calc_mask_penalty(&qr);
+            int32_t penalty = calc_mask_penalty(&qr);
             if (penalty < minPenalty) {
                 minPenalty = penalty;
                 bestMask = mask;
             }
 
             // re-applying reverts the mask
-            qr_apply_mask(&qr, mask);
+            apply_mask(&qr, mask);
         }
     }
     else {
         bestMask = forcedMask;
     }
-    qr_apply_mask(&qr, bestMask);
+    apply_mask(&qr, bestMask);
 
     if (isDebug) {
         fprintf(stderr, ">>> APPLYING DATA MASK %d\n", bestMask);
@@ -1025,8 +1025,8 @@ qr_encode(QROptions *options)
 
 
     // 8. Draw QR format and version
-    qr_draw_format_modules(&qr, level, bestMask);
-    qr_draw_version_modules(&qr, version);
+    draw_format_modules(&qr, level, bestMask);
+    draw_version_modules(&qr, version);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FORMAT & VERSION MODULES\n");
