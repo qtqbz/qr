@@ -24,7 +24,7 @@ bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount)
 {
     ASSERT(0 <= bitsCount && bitsCount <= 64);
     ASSERT((bitsCount == 64) || ((bits >> bitsCount) == 0));
-    ASSERT((bv->size + bitsCount) <= ARRAY_CAP(bv->bytes));
+    ASSERT((bv->size + bitsCount) <= (ARRAY_CAP(bv->bytes) * 8));
 
     while (bitsCount--) {
         bv->bytes[bv->size / 8] |= ((bits >> bitsCount) & 1) << (7 - (bv->size % 8));
