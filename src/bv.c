@@ -8,10 +8,19 @@ struct BitVec
 };
 
 static void
-bv_print(FILE *out, BitVec bv)
+bv_print_bin(FILE *out, BitVec bv)
 {
     for (int32_t i = 0; i < bv.size; i++) {
         fprintf(out, "%c%s", ((bv.bytes[i / 8] >> (7 - (i % 8))) & 1) ? '1' : '0', (((i + 1) % 8) == 0) ? " " : "");
+    }
+    fprintf(out, "\n");
+}
+
+static void
+bv_print_hex(FILE *out, BitVec bv)
+{
+    for (int32_t i = 0; i < bv.size; i += 8) {
+        fprintf(out, "%02X ", bv.bytes[i / 8]);
     }
     fprintf(out, "\n");
 }

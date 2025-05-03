@@ -11,7 +11,7 @@ all: clean build
 
 build: $(SRC)
 	mkdir -p $(BINDIR)
-	$(CC) -o $(EXE) $^ $(CFLAGS)
+	$(CC) -o $(EXE) $^ $(CFLAGS) -DBUILD_DEBUG
 
 clean:
 	rm -f $(EXE)

@@ -2,346 +2,166 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <inttypes.h>
+#include <unistd.h>
 
 #include "utils.c"
-#include "qr.c"
 #include "bv.c"
 #include "gf256.c"
-
-typedef struct CommandLineArguments CommandLineArguments;
-struct CommandLineArguments
-{
-    const char *text;
-    bool verbose;
-};
+#include "qr.c"
 
 static void
-print_usage(char *exe)
+print_usage_and_fail(char *exe)
 {
-    fprintf(stderr, "Usage: %s [OPTIONS] <YOUR TEXT>\n", exe);
+    fprintf(stderr, "Usage: %s [OPTIONS]\n", exe);
     fprintf(stderr, "OPTIONS:\n");
-    fprintf(stderr, "\t-v verbose\n");
+    fprintf(stderr, "    -t TEXT    Encode the given TEXT. Cannot be combined with -f.\n");
+    fprintf(stderr, "    -f FILE    Encode the content of FILE. Cannot be combined with -t.\n");
+    fprintf(stderr, "    -l LEVEL   Force error correction level from 0 (Low) to 3 (High).\n");
+    fprintf(stderr, "    -v VERSION Force QR version from 1 to 40.\n");
+    fprintf(stderr, "    -m MASK    Force mask pattern from 0 to 7.\n");
+    fprintf(stderr, "    -d         Print debugging messages to STDERR.\n");
+    fprintf(stderr, "If neither -t nor -f is specified, encodes the data read from STDIN.\n");
+    exit(1);
 }
 
-static CommandLineArguments
-parse_args(int32_t argc, char **argv)
+static QROptions
+parse_options(int32_t argc, char **argv)
 {
-    if (argc < 2) {
-        print_usage(argv[0]);
-        exit(1);
-    }
-    CommandLineArguments args = {};
+    QROptions options = {};
+    options.forcedLevel = LEVEL_INVALID;
+    options.forcedVersion = VERSION_INVALID;
+    options.forcedMask = MASK_INVALID;
+    options.isDebug = false;
 
-    for (int32_t i = 1; i < argc - 1; i++) {
-        if (argv[i][0] != '-') {
-            print_usage(argv[0]);
-            exit(1);
+    char *exe = argv[0];
+    char *text = NULL;
+    char *filename = NULL;
+
+    for (int32_t i = 1; i < argc; i++) {
+        char *option = argv[i];
+        if (strlen(option) != 2 || option[0] != '-') {
+            fprintf(stderr, "Unknown option: %s\n", option);
+            print_usage_and_fail(exe);
         }
-        for (int32_t j = 1; argv[i][j] != '\0'; j++) {
-            switch (argv[i][j]) {
-                case 'v': {
-                    args.verbose = true;
-                } break;
-                default: {
-                    fprintf(stderr, "Unknown flag: %c\n", argv[i][1]);
-                    print_usage(argv[0]);
-                    exit(1);
+        switch (option[1]) {
+            case 't': {
+                if (filename != NULL) {
+                    fprintf(stderr, "-t cannot be combined with -f\n");
+                    print_usage_and_fail(exe);
                 }
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing TEXT\n");
+                    print_usage_and_fail(exe);
+                }
+                text = argv[i];
+            } break;
+            case 'f': {
+                if (text != NULL) {
+                    fprintf(stderr, "-f cannot be combined with -t\n");
+                    print_usage_and_fail(exe);
+                }
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing FILE\n");
+                    print_usage_and_fail(exe);
+                }
+                filename = argv[i];
+            } break;
+            case 'l': {
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing LEVEL\n");
+                    print_usage_and_fail(exe);
+                }
+                char *levelString = argv[i];
+                intmax_t level = strtoimax(levelString, NULL, 10);
+                if (level < ECL_LOW || level > ECL_HIGH) {
+                    fprintf(stderr, "Invalid error correction level: %s\n", levelString);
+                    print_usage_and_fail(exe);
+                }
+                options.forcedLevel = (ErrorCorrectionLevel)level;
+            } break;
+            case 'v': {
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing VERSION\n");
+                    print_usage_and_fail(exe);
+                }
+                char *versionString = argv[i];
+                intmax_t version = strtoimax(versionString, NULL, 10) - 1;
+                if (version < MIN_VERSION || version > MAX_VERSION) {
+                    fprintf(stderr, "Invalid version: %s\n", versionString);
+                    print_usage_and_fail(exe);
+                }
+                options.forcedVersion = (int32_t)version;
+            } break;
+            case 'm': {
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing MASK\n");
+                    print_usage_and_fail(exe);
+                }
+                char *maskString = argv[i];
+                intmax_t mask = strtoimax(maskString, NULL, 10);
+                if (mask < MIN_MASK || mask > MAX_MASK) {
+                    fprintf(stderr, "Invalid mask: %s\n", maskString);
+                    print_usage_and_fail(exe);
+                }
+                options.forcedMask = (int32_t)mask;
+            } break;
+            case 'd': {
+                options.isDebug = true;
+            } break;
+            default: {
+                fprintf(stderr, "Unknown option: %c\n", argv[i][1]);
+                print_usage_and_fail(exe);
             }
         }
     }
 
-    args.text = argv[argc - 1];
+    if (text != NULL) {
+        size_t textLen = strlen(text);
+        strncpy(options.text, text, textLen);
+        options.textLen = (int32_t)textLen;
+    }
+    else if (filename != NULL) {
+        FILE *file = fopen(filename, "r");
+        if (file == NULL) {
+            fprintf(stderr, "Failed to open file '%s': %s\n", filename, strerror(errno));
+            exit(1);
+        }
+        size_t fileSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN, file);
+        if (ferror(file) != 0) {
+            fprintf(stderr, "Failed to read from file '%s': %s\n", filename, strerror(errno));
+            exit(1);
+        }
+        fclose(file);
+        options.text[fileSize] = '\0';
+        options.textLen = (int32_t)fileSize;
+    }
+    else {
+        if (isatty(STDIN_FILENO)) {
+            printf("Enter text to encode (Ctrl+D to finish): ");
+            fflush(stdout);
+        }
+        FILE *file = stdin;
+        size_t fileSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN, file);
+        if (ferror(file) != 0) {
+            fprintf(stderr, "Failed to read from STDIN: %s\n", strerror(errno));
+            exit(1);
+        }
+        options.text[fileSize] = '\0';
+        options.textLen = (int32_t)fileSize;
+    }
 
-    return args;
+    ASSERT(options.textLen > 0);
+
+    return options;
 }
 
 int32_t
 main(int32_t argc, char **argv)
 {
-    CommandLineArguments args = parse_args(argc, argv);
-    ASSERT(args.text != NULL);
-
-    const char *text = args.text;
-    int32_t textCharCount = (int32_t)strlen(text);
-    // If not specified, use the lowest error correction level
-    ErrorCorrectionLevel level = ECL_LOW;
-
-    if (args.verbose) {
-        printf("Generating QR:\n"
-               "\ttext='%s'\n"
-               "\ttextCharCount=%d\n"
-               "\tlevel=%s\n",
-               text,
-               textCharCount,
-               ErrorCorrectionLevelNames[level]);
-    }
-
-
-    // 1. Data analysis.
-    // Infer encoding mode
-    EncodingMode mode = qr_get_encoding_mode(text, textCharCount);
-    // Infer QR version
-    int32_t version = qr_get_version(mode, level, textCharCount);
-    if (version == VERSION_INVALID) {
-        fprintf(stderr, "Text too long, can't fit into any QR code version\n");
-        exit(1);
-    }
-
-    // If possible, increase the error correction level while still staying in the same version
-    for (ErrorCorrectionLevel newLevel = level + 1; newLevel <= ECL_HIGH; level = newLevel++) {
-        if (textCharCount > MAX_CHAR_COUNT[mode][newLevel][version]) {
-            break;
-        }
-    }
-
-    if (args.verbose) {
-        printf("Data analysis complete:\n"
-           "\tmode=%s\n"
-           "\tversion=%d\n"
-           "\tlevel=%s\n",
-           EncodingModeNames[mode],
-           version + 1,
-           ErrorCorrectionLevelNames[level]);
-    }
-
-
-    // 2. Data Encoding
-    BitVec bv = {};
-
-    // Encoding mode
-    bv_append(&bv, (1U) << mode, 4);
-
-    // Text length
-    int32_t lengthBitCount = LENGTH_BITS_COUNT[mode][version];
-    bv_append(&bv, textCharCount, lengthBitCount);
-
-    // Text itself
-    if (mode == EM_NUMERIC) {
-        int32_t number = 0;
-        for (int32_t i = 0; i < textCharCount; i++) {
-            uint8_t ch = text[i];
-            int32_t digit = ch - '0';
-            number = number * 10 + digit;
-            if (((i % 3) == 2) || (i == (textCharCount - 1))) {
-                bv_append(&bv, number, (number >= 100) ? 10 : ((number >= 10) ? 7 : 4));
-                number = 0;
-            }
-        }
-    }
-    else if (mode == EM_ALPHANUM) {
-        int32_t number = 0;
-        for (int32_t i = 0; i < textCharCount; i++) {
-            uint8_t ch = text[i];
-
-            int32_t addend = 0;
-            if (ch <= '9') addend = ch - '0';
-            else if (ch <= 'Z') addend = ch - 'A' + 10;
-            else if (ch == ' ') addend = 36;
-            else if (ch == '$') addend = 37;
-            else if (ch == '%') addend = 38;
-            else if (ch == '*') addend = 39;
-            else if (ch == '+') addend = 40;
-            else if (ch == '-') addend = 41;
-            else if (ch == '.') addend = 42;
-            else if (ch == '/') addend = 43;
-            else if (ch == ':') addend = 44;
-            else ASSERT(false); // unreachable
-
-            number = number * 45 + addend;
-            if (((i % 2) == 1) || (i == (textCharCount - 1))) {
-                bv_append(&bv, number, (number >= 45) ? 11 : 6);
-                number = 0;
-            }
-        }
-    }
-    else {
-        for (int32_t i = 0; i < textCharCount; i++) {
-            bv_append(&bv, text[i], 8);
-        }
-    }
-
-    int32_t dataCodewordsCount = qr_calc_data_codewords_count(version, level);
-    int32_t dataModulesCount = dataCodewordsCount * 8;
-
-    // Terminator zeros
-    int32_t terminatorLength = MIN(dataModulesCount - bv.size, 4);
-    bv_append(&bv, 0, terminatorLength);
-
-    // Zero padding for 8 bit alignment
-    int32_t zeroPaddingLength = ((bv.size % 8) == 0) ? 0 : 8 - (bv.size % 8);
-    bv_append(&bv, 0, zeroPaddingLength);
-
-    // Padding pattern
-    int32_t paddingLength = dataModulesCount - bv.size;
-    for (int32_t i = 0; i < (paddingLength / 8); i++) {
-        bv_append(&bv, (i & 1) ? 17 : 236, 8);
-    }
-
-    if (args.verbose) {
-        printf("Data encoding complete:\n"
-               "\tbits=");
-        bv_print(stdout, bv);
-    }
-
-
-    // 3. Error correction coding
-    uint8_t blocks[MAX_BLOCKS_COUNT][MAX_BLOCKS_LENGTH] = {};
-
-    // Divide data codewords into blocks and calculate error correction codewords for them
-    uint8_t *dataCodewords = bv.bytes;
-    int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
-
-    int32_t blocksCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version];
-    ASSERT(blocksCount <= MAX_BLOCKS_COUNT);
-
-    int32_t shortBlocksCount = blocksCount - (contentCodewordsCount % blocksCount);
-    int32_t shortBlockLength = contentCodewordsCount / blocksCount;
-    ASSERT(shortBlockLength <= MAX_BLOCKS_LENGTH);
-
-    int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
-    const uint8_t *divisor = GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
-
-    int32_t dataCodewordsIndex = 0;
-    for (int32_t i = 0; i < blocksCount; i++) {
-        uint8_t *block = blocks[i];
-        int32_t blockIndex = 0;
-
-        // Copy data codewords to block
-        int32_t currBlockLength = (i < shortBlocksCount) ? shortBlockLength : shortBlockLength + 1;
-        int32_t dataCodewordsPerBlockCount = currBlockLength - errorCodewordsPerBlockCount;
-        for (int32_t j = 0; j < dataCodewordsPerBlockCount; j++) {
-            block[blockIndex++] = dataCodewords[dataCodewordsIndex++];
-        }
-
-        // Pad shorter blocks for easier interleaving later
-        if (i < shortBlocksCount) {
-            blockIndex++;
-        }
-
-        // Calculate error correcting codewords
-        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + 1] = {};
-        int32_t remainderLength = gf256_polynom_divide(block,
-                                                    currBlockLength,
-                                                    divisor,
-                                                    errorCodewordsPerBlockCount + 1,
-                                                    errorCodewords);
-        ASSERT(remainderLength == errorCodewordsPerBlockCount);
-
-        if (args.verbose) {
-            printf("   data[%3d]: ", currBlockLength);
-            for (int32_t j = 0; j < currBlockLength; j++) {
-                printf("%4d, ", block[j]);
-            }
-            printf("\n");
-            printf("divisor[%3d]: ", errorCodewordsPerBlockCount + 1);
-            for (int32_t j = 0; j < errorCodewordsPerBlockCount + 1; j++) {
-                printf("%4d, ", divisor[j]);
-            }
-            printf("\n");
-            printf(" result[%3d]: ", errorCodewordsPerBlockCount);
-            for (int32_t j = 0; j < errorCodewordsPerBlockCount; j++) {
-                printf("%4d, ", errorCodewords[j]);
-            }
-            printf("\n");
-            printf("\n");
-        }
-
-        // Copy error correcting codewords to block
-        int32_t errorCodewordsIndex = 0;
-        for (int32_t j = 0; j < errorCodewordsPerBlockCount; j++) {
-            block[blockIndex++] = errorCodewords[errorCodewordsIndex++];
-        }
-    }
-
-
-    // 4. Codeword interleaving
-    uint8_t interleavedCodewords[MAX_BLOCKS_COUNT * MAX_BLOCKS_LENGTH] = {};
-    int32_t interleavedCodewordsCount = 0;
-    for (int32_t i = 0; i < (shortBlockLength + 1); i++) {
-        for (int32_t j = 0; j < blocksCount; j++) {
-            if (j < shortBlocksCount && i == (shortBlockLength - errorCodewordsPerBlockCount)) {
-                // skip the padding on shorter blocks
-                continue;
-            }
-            interleavedCodewords[interleavedCodewordsCount++] = blocks[j][i];
-        }
-    }
-
-    if (args.verbose) {
-        printf("Codeword interleaving complete:\n"
-               "\tinterleaved codewords=");
-        for (int32_t i = 0; i < interleavedCodewordsCount; i++) {
-            printf("%.2X ", interleavedCodewords[i]);
-        }
-        printf("\n\tinterleaved codeword count=%d\n", interleavedCodewordsCount);
-    }
-
-
-    // 5. Draw functional QR patterns
-    QR qr = { .size = 4 * version + 21 };
-
-    qr_draw_functional_patterns(&qr, version);
-
-    if (args.verbose) {
-        printf("Drawing functional patterns complete:\n");
-        qr_print(stdout, &qr);
-    }
-
-
-    // 6. Reserve format & version modules
-    qr_reserve_format_modules(&qr);
-    qr_reserve_version_modules(&qr, version);
-
-    if (args.verbose) {
-        printf("Reserving format & version modules complete:\n");
-        qr_print(stdout, &qr);
-    }
-
-
-    // 7. Draw QR data
-    qr_draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
-
-    if (args.verbose) {
-        printf("Drawing QR data complete:\n");
-        qr_print(stdout, &qr);
-    }
-
-
-    // 8. Apply data masking
-    int32_t minPenalty = INT32_MAX;
-    int32_t bestMask = 2;
-    for (int32_t mask = 0; mask < MASK_COUNT; mask++) {
-        qr_draw_format_modules(&qr, level, mask);
-        qr_draw_version_modules(&qr, version);
-        qr_apply_mask(&qr, mask);
-
-        int32_t penalty = qr_calc_mask_penalty(&qr);
-        if (penalty < minPenalty) {
-            minPenalty = penalty;
-            bestMask = mask;
-        }
-
-        // re-applying reverts the mask
-        qr_apply_mask(&qr, mask);
-    }
-    qr_apply_mask(&qr, bestMask);
-
-    if (args.verbose) {
-        printf("Applying data mask %d complete:\n", bestMask);
-        qr_print(stdout, &qr);
-    }
-
-
-    // 9. Draw QR format and version
-    qr_draw_format_modules(&qr, level, bestMask);
-    qr_draw_version_modules(&qr, version);
-
-    if (args.verbose) {
-        printf("Drawing format & version modules complete:\n");
-        qr_print(stdout, &qr);
-    }
-
+    QROptions options = parse_options(argc, argv);
+    QR qr = qr_encode(&options);
 
     printf("\n");
     qr_print(stdout, &qr);

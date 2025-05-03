@@ -1,7 +1,11 @@
+#define MAX_TEXT_LEN 7089 // = MAX_CHAR_COUNT[EM_NUMERIC][ECL_LOW][MAX_VERSION]
+
 #define MIN_VERSION 0
 #define MAX_VERSION 39
 #define VERSION_COUNT 40
 #define VERSION_INVALID (-1)
+
+#define LEVEL_INVALID (-1)
 
 #define MAX_BLOCKS_COUNT 81
 #define MAX_BLOCKS_LENGTH 153
@@ -10,7 +14,10 @@
 
 #define ALIGNMENT_COORDINATES_COUNT 7
 
+#define MIN_MASK 0
+#define MAX_MASK 7
 #define MASK_COUNT 8
+#define MASK_INVALID (-1)
 
 #define QR_MODULE_VALUE(qr, row, column) ((qr)->modules[(row) * (qr)->size + (column)])
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
@@ -74,11 +81,26 @@ struct ModuleValue
     ModuleColor color;
 };
 
+typedef struct QROptions QROptions;
+struct QROptions
+{
+    char text[MAX_TEXT_LEN + 1];
+    int32_t textLen;
+    ErrorCorrectionLevel forcedLevel;
+    int32_t forcedVersion;
+    int32_t forcedMask;
+    bool isDebug;
+};
+
 typedef struct QR QR;
 struct QR
 {
     ModuleValue modules[MAX_MODULE_COUNT];
     int32_t size;
+    EncodingMode mode;
+    ErrorCorrectionLevel level;
+    int32_t version;
+    int32_t mask;
 };
 
 static const ModuleValue DATA_WHITE = { .type = MT_DATA, .color = MC_WHITE };
@@ -327,15 +349,16 @@ static int32_t
 qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 {
     int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
-    int32_t errorCorrectionCodewordsCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version] * ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
+    int32_t errorCorrectionCodewordsCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version]
+        * ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
     int32_t dataCodewordsCount = contentCodewordsCount - errorCorrectionCodewordsCount;
     return dataCodewordsCount;
 }
 
 static int32_t
-qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *charsToMatch, int32_t offset)
+qr_find_first_unmatch_index(const char *text, int32_t textLen, char *charsToMatch, int32_t offset)
 {
-    for (int32_t i = offset; i < textCharCount; i++) {
+    for (int32_t i = offset; i < textLen; i++) {
         char ch = text[i];
         if (!strchr(charsToMatch, ch)) {
             return i;
@@ -345,13 +368,13 @@ qr_find_first_unmatch_index(const char *text, int32_t textCharCount, char *chars
 }
 
 static EncodingMode
-qr_get_encoding_mode(const char *text, int32_t textCharCount)
+qr_get_encoding_mode(const char *text, int32_t textLen)
 {
-    int32_t i = qr_find_first_unmatch_index(text, textCharCount, "0123456789", 0);
+    int32_t i = qr_find_first_unmatch_index(text, textLen, "0123456789", 0);
     if (i < 0) {
         return EM_NUMERIC;
     }
-    i = qr_find_first_unmatch_index(text, textCharCount, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
+    i = qr_find_first_unmatch_index(text, textLen, "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:", i + 1);
     if (i < 0) {
         return EM_ALPHANUM;
     }
@@ -579,16 +602,16 @@ qr_apply_mask(QR *qr, int32_t mask)
                     invert = ((row + column) % 3) == 0;
                 } break;
                 case 4: {
-                    invert = ((row / 2 + column / 3) % 2) == 0;
+                    invert = (((row / 2) + (column / 3)) % 2) == 0;
                 } break;
                 case 5: {
                     invert = ((row * column) % 2) + ((row * column) % 3) == 0;
                 } break;
                 case 6: {
-                    invert = (((row * column) % 2) + ((row * column) % 3) % 2) == 0;
+                    invert = ((((row * column) % 2) + ((row * column) % 3)) % 2) == 0;
                 } break;
                 case 7: {
-                    invert = (((row + column) % 2) + ((row * column) % 3) % 2) == 0;
+                    invert = ((((row + column) % 2) + ((row * column) % 3)) % 2) == 0;
                 } break;
                 default: {
                     ASSERT(false); // unreachable
@@ -795,4 +818,327 @@ qr_draw_version_modules(QR *qr, int32_t version)
             bitIndex++;
         }
     }
+}
+
+static QR
+qr_encode(QROptions *options)
+{
+    char *text = options->text;
+    int32_t textLen = options->textLen;
+    ErrorCorrectionLevel forcedLevel = options->forcedLevel;
+    int32_t forcedVersion = options->forcedVersion;
+    int32_t forcedMask = options->forcedMask;
+    bool isDebug = options->isDebug;
+
+    // 1. Data analysis.
+    EncodingMode mode = qr_get_encoding_mode(text, textLen);
+
+    ErrorCorrectionLevel level = (forcedLevel != LEVEL_INVALID) ? forcedLevel : ECL_LOW;
+
+    int32_t version = (forcedVersion != VERSION_INVALID) ? forcedVersion : qr_get_version(mode, level, textLen);
+    if (version == VERSION_INVALID) {
+        fprintf(stderr,
+                "Failed to find a suitable version for a text of length %d "
+                "with %s mode "
+                "and %s error correction level\n",
+                textLen,
+                EncodingModeNames[mode],
+                ErrorCorrectionLevelNames[level]);
+        exit(1);
+    }
+
+    if (forcedLevel == LEVEL_INVALID) {
+        // Try to increase the error correction level while still staying in the same version.
+        for (ErrorCorrectionLevel newLevel = level + 1; newLevel <= ECL_HIGH; newLevel++) {
+            if (textLen > MAX_CHAR_COUNT[mode][newLevel][version]) {
+                break;
+            }
+            level = newLevel;
+        }
+    }
+
+    if (textLen > MAX_CHAR_COUNT[mode][level][version]) {
+        fprintf(stderr,
+                "The text exceeds the length limit of %d characters "
+                "for %s mode "
+                "and %s error correction level "
+                "and version %d\n",
+                MAX_CHAR_COUNT[mode][level][version],
+                EncodingModeNames[mode],
+                ErrorCorrectionLevelNames[level],
+                version);
+        exit(1);
+    }
+
+    if (isDebug) {
+        fprintf(stderr, ">>> DATA ANALYSIS\n");
+        fprintf(stderr, "Text: ");
+        for (int32_t i = 0; i < textLen; i++) {
+            switch (text[i]) {
+                case '\a': fprintf(stderr, "\\a"); break;
+                case '\b': fprintf(stderr, "\\b"); break;
+                case '\f': fprintf(stderr, "\\f"); break;
+                case '\n': fprintf(stderr, "\\n"); break;
+                case '\r': fprintf(stderr, "\\r"); break;
+                case '\t': fprintf(stderr, "\\t"); break;
+                case '\v': fprintf(stderr, "\\v"); break;
+                default: fprintf(stderr, "%c", text[i]);
+            }
+        }
+        fprintf(stderr, "\n");
+        fprintf(stderr, "Text length: %d\n", textLen);
+        fprintf(stderr, "Encoding mode: %s\n", EncodingModeNames[mode]);
+        fprintf(stderr, "QR version: %d\n", version + 1);
+        fprintf(stderr, "Error correction level: %s\n", ErrorCorrectionLevelNames[level]);
+        fprintf(stderr, "\n");
+    }
+
+
+    // 2. Data Encoding
+    BitVec bv = {};
+
+    // Encoding mode
+    bv_append(&bv, (1U) << mode, 4);
+
+    // Text length
+    int32_t lengthBitCount = LENGTH_BITS_COUNT[mode][version];
+    bv_append(&bv, textLen, lengthBitCount);
+
+    // Text itself
+    if (mode == EM_NUMERIC) {
+        int32_t number = 0;
+        for (int32_t i = 0; i < textLen; i++) {
+            uint8_t ch = text[i];
+            int32_t digit = ch - '0';
+            number = number * 10 + digit;
+            if (((i % 3) == 2) || (i == (textLen - 1))) {
+                bv_append(&bv, number, (number >= 100) ? 10 : ((number >= 10) ? 7 : 4));
+                number = 0;
+            }
+        }
+    }
+    else if (mode == EM_ALPHANUM) {
+        int32_t number = 0;
+        for (int32_t i = 0; i < textLen; i++) {
+            uint8_t ch = text[i];
+
+            int32_t addend = 0;
+            if (ch <= '9') addend = ch - '0';
+            else if (ch <= 'Z') addend = ch - 'A' + 10;
+            else if (ch == ' ') addend = 36;
+            else if (ch == '$') addend = 37;
+            else if (ch == '%') addend = 38;
+            else if (ch == '*') addend = 39;
+            else if (ch == '+') addend = 40;
+            else if (ch == '-') addend = 41;
+            else if (ch == '.') addend = 42;
+            else if (ch == '/') addend = 43;
+            else if (ch == ':') addend = 44;
+            else ASSERT(false); // unreachable
+
+            number = number * 45 + addend;
+            if (((i % 2) == 1) || (i == (textLen - 1))) {
+                bv_append(&bv, number, (number >= 45) ? 11 : 6);
+                number = 0;
+            }
+        }
+    }
+    else {
+        for (int32_t i = 0; i < textLen; i++) {
+            bv_append(&bv, text[i], 8);
+        }
+    }
+
+    int32_t dataCodewordsCount = qr_calc_data_codewords_count(version, level);
+    int32_t dataModulesCount = dataCodewordsCount * 8;
+
+    // Terminator zeros
+    int32_t terminatorLength = MIN(dataModulesCount - bv.size, 4);
+    bv_append(&bv, 0, terminatorLength);
+
+    // Zero padding for 8 bit alignment
+    int32_t zeroPaddingLength = ((bv.size % 8) == 0) ? 0 : 8 - (bv.size % 8);
+    bv_append(&bv, 0, zeroPaddingLength);
+
+    // Padding pattern
+    int32_t paddingLength = dataModulesCount - bv.size;
+    for (int32_t i = 0; i < (paddingLength / 8); i++) {
+        bv_append(&bv, (i & 1) ? 17 : 236, 8);
+    }
+
+    if (isDebug) {
+        fprintf(stderr, ">>> DATA ENCODING\n");
+
+        fprintf(stderr, "Data codewords in binary: ");
+        bv_print_bin(stderr, bv);
+
+        fprintf(stderr, "Data codewords in hex: ");
+        bv_print_hex(stderr, bv);
+
+        fprintf(stderr, "\n");
+    }
+
+
+    // 3. Error correction coding
+    uint8_t blocks[MAX_BLOCKS_COUNT][MAX_BLOCKS_LENGTH] = {};
+
+    // Divide data codewords into blocks and calculate error correction codewords for them
+    uint8_t *dataCodewords = bv.bytes;
+    int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
+
+    int32_t blocksCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version];
+    ASSERT(blocksCount <= MAX_BLOCKS_COUNT);
+
+    int32_t shortBlocksCount = blocksCount - (contentCodewordsCount % blocksCount);
+    int32_t shortBlockLength = contentCodewordsCount / blocksCount;
+    ASSERT(shortBlockLength <= MAX_BLOCKS_LENGTH);
+
+    int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
+    const uint8_t *divisor = GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
+
+    int32_t dataCodewordsIndex = 0;
+    for (int32_t i = 0; i < blocksCount; i++) {
+        uint8_t *block = blocks[i];
+        int32_t blockIndex = 0;
+
+        // Copy data codewords to block
+        int32_t currBlockLength = (i < shortBlocksCount) ? shortBlockLength : shortBlockLength + 1;
+        int32_t dataCodewordsPerBlockCount = currBlockLength - errorCodewordsPerBlockCount;
+        for (int32_t j = 0; j < dataCodewordsPerBlockCount; j++) {
+            block[blockIndex++] = dataCodewords[dataCodewordsIndex++];
+        }
+
+        // Pad shorter blocks for easier interleaving later
+        if (i < shortBlocksCount) {
+            blockIndex++;
+        }
+
+        // Calculate error correcting codewords
+        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + 1] = {};
+        int32_t remainderLength = gf256_polynom_divide(block,
+                                                    currBlockLength,
+                                                    divisor,
+                                                    errorCodewordsPerBlockCount + 1,
+                                                    errorCodewords);
+        ASSERT(remainderLength == errorCodewordsPerBlockCount);
+
+        // Copy error correcting codewords to block
+        int32_t errorCodewordsIndex = 0;
+        for (int32_t j = 0; j < errorCodewordsPerBlockCount; j++) {
+            block[blockIndex++] = errorCodewords[errorCodewordsIndex++];
+        }
+    }
+
+    // Interleave codewords
+    uint8_t interleavedCodewords[MAX_BLOCKS_COUNT * MAX_BLOCKS_LENGTH] = {};
+    int32_t interleavedCodewordsCount = 0;
+    for (int32_t i = 0; i < (shortBlockLength + 1); i++) {
+        for (int32_t j = 0; j < blocksCount; j++) {
+            if (j < shortBlocksCount && i == (shortBlockLength - errorCodewordsPerBlockCount)) {
+                // skip the padding on shorter blocks
+                continue;
+            }
+            interleavedCodewords[interleavedCodewordsCount++] = blocks[j][i];
+        }
+    }
+
+    if (isDebug) {
+        fprintf(stderr, ">>> ERROR CORRECTION CODE GENERATION\n");
+
+        fprintf(stderr, "Block count: %d\n", blocksCount);
+        for (int32_t i = 0; i < blocksCount; i++) {
+            fprintf(stderr, "Block #%d: ", i);
+            uint8_t *block = blocks[i];
+            int32_t currBlockLength = (i < shortBlocksCount) ? shortBlockLength : shortBlockLength + 1;
+            for (int32_t j = 0; j < currBlockLength; j++) {
+                fprintf(stderr, "%02X ", block[j]);
+            }
+            fprintf(stderr, "\n");
+        }
+
+        fprintf(stderr, "Interleaved codewords: ");
+        for (int32_t i = 0; i < interleavedCodewordsCount; i++) {
+            fprintf(stderr, "%02X ", interleavedCodewords[i]);
+        }
+        fprintf(stderr, "\n");
+
+        fprintf(stderr, "\n");
+    }
+
+
+    // 4. Draw functional QR patterns
+    QR qr = { .size = 4 * version + 21 };
+
+    qr_draw_functional_patterns(&qr, version);
+
+    if (isDebug) {
+        fprintf(stderr, ">>> PLACING FUNCTIONAL PATTERNS\n");
+        qr_print(stderr, &qr);
+        fprintf(stderr, "\n");
+    }
+
+
+    // 5. Reserve format & version modules
+    qr_reserve_format_modules(&qr);
+    qr_reserve_version_modules(&qr, version);
+
+    if (isDebug) {
+        fprintf(stderr, ">>> RESERVING FORMAT & VERSION MODULES\n");
+        qr_print(stderr, &qr);
+        fprintf(stderr, "\n");
+    }
+
+
+    // 6. Draw QR data
+    qr_draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
+
+    if (isDebug) {
+        fprintf(stderr, ">>> PLACING DATA MODULES\n");
+        qr_print(stderr, &qr);
+        fprintf(stderr, "\n");
+    }
+
+
+    // 7. Apply data masking
+    int32_t minPenalty = INT32_MAX;
+    int32_t bestMask = 0;
+    if (forcedMask == MASK_INVALID) {
+        for (int32_t mask = 0; mask < MASK_COUNT; mask++) {
+            qr_draw_format_modules(&qr, level, mask);
+            qr_draw_version_modules(&qr, version);
+            qr_apply_mask(&qr, mask);
+
+            int32_t penalty = qr_calc_mask_penalty(&qr);
+            if (penalty < minPenalty) {
+                minPenalty = penalty;
+                bestMask = mask;
+            }
+
+            // re-applying reverts the mask
+            qr_apply_mask(&qr, mask);
+        }
+    }
+    else {
+        bestMask = forcedMask;
+    }
+    qr_apply_mask(&qr, bestMask);
+
+    if (isDebug) {
+        fprintf(stderr, ">>> APPLYING DATA MASK %d\n", bestMask);
+        qr_print(stderr, &qr);
+        fprintf(stderr, "\n");
+    }
+
+
+    // 8. Draw QR format and version
+    qr_draw_format_modules(&qr, level, bestMask);
+    qr_draw_version_modules(&qr, version);
+
+    if (isDebug) {
+        fprintf(stderr, ">>> PLACING FORMAT & VERSION MODULES\n");
+        qr_print(stderr, &qr);
+        fprintf(stderr, "\n");
+    }
+
+    return qr;
 }
