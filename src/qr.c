@@ -1,107 +1,19 @@
-#define MAX_TEXT_LEN 7089 // = MAX_CHAR_COUNT[EM_NUMERIC][ECL_LOW][MAX_VERSION]
+#include <stdlib.h>
+#include <string.h>
 
-#define MIN_VERSION 0
-#define MAX_VERSION 39
-#define VERSION_COUNT 40
-#define VERSION_INVALID (-1)
-
-#define LEVEL_INVALID (-1)
+#include "utils.h"
+#include "bv.h"
+#include "gf256.h"
+#include "qr.h"
 
 #define MAX_BLOCKS_COUNT 81
 #define MAX_BLOCKS_LENGTH 153
 
-#define MAX_MODULE_COUNT 31329 // = (4 × MaxVersion + 21) * (4 × MaxVersion + 21)
-
 #define ALIGNMENT_COORDINATES_COUNT 7
-
-#define MIN_MASK 0
-#define MAX_MASK 7
-#define MASK_COUNT 8
-#define MASK_INVALID (-1)
 
 #define QR_MODULE_VALUE(qr, row, column) ((qr)->modules[(row) * (qr)->size + (column)])
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
 #define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
-
-typedef int32_t EncodingMode;
-enum EncodingMode
-{
-    EM_NUMERIC,
-    EM_ALPHANUM,
-    EM_BYTE,
-    //EM_KANJI,
-
-    EM_COUNT,
-};
-
-static const char *const EncodingModeNames[EM_COUNT] = {
-    "NUMERIC (0001)",
-    "ALPHANUMERIC (0010)",
-    "BYTE (0100)",
-    //"KANJI (1000)",
-};
-
-typedef int32_t ErrorCorrectionLevel;
-enum ErrorCorrectionLevel
-{
-    ECL_LOW,      // ~7%
-    ECL_MEDIUM,   // ~15%
-    ECL_QUARTILE, // ~25%
-    ECL_HIGH,     // ~30%
-
-    ECL_COUNT,
-};
-
-static const char *const ErrorCorrectionLevelNames[ECL_COUNT] = {
-    "LOW",
-    "MEDIUM",
-    "QUARTILE",
-    "HIGH",
-};
-
-typedef int32_t ModuleType;
-enum ModuleType
-{
-    MT_NONE,
-    MT_DATA,
-    MT_FUNCTIONAL,
-};
-
-typedef int32_t ModuleColor;
-enum ModuleColor
-{
-    MC_WHITE,
-    MC_BLACK,
-};
-
-typedef struct ModuleValue ModuleValue;
-struct ModuleValue
-{
-    ModuleType type;
-    ModuleColor color;
-};
-
-typedef struct QROptions QROptions;
-struct QROptions
-{
-    char text[MAX_TEXT_LEN + 1];
-    int32_t textLen;
-    ErrorCorrectionLevel forcedLevel;
-    int32_t forcedVersion;
-    int32_t forcedMask;
-    bool isDebug;
-};
-
-typedef struct QR QR;
-struct QR
-{
-    ModuleValue modules[MAX_MODULE_COUNT];
-    int32_t size;
-    EncodingMode mode;
-    ErrorCorrectionLevel level;
-    int32_t version;
-    int32_t mask;
-};
 
 static const ModuleValue DATA_WHITE = { .type = MT_DATA, .color = MC_WHITE };
 static const ModuleValue DATA_BLACK = { .type = MT_DATA, .color = MC_BLACK };
@@ -356,7 +268,7 @@ qr_calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 }
 
 static int32_t
-qr_find_first_unmatch_index(const char *text, int32_t textLen, char *charsToMatch, int32_t offset)
+qr_find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int32_t offset)
 {
     for (int32_t i = offset; i < textLen; i++) {
         char ch = text[i];
@@ -368,7 +280,7 @@ qr_find_first_unmatch_index(const char *text, int32_t textLen, char *charsToMatc
 }
 
 static EncodingMode
-qr_get_encoding_mode(const char *text, int32_t textLen)
+qr_get_encoding_mode(char *text, int32_t textLen)
 {
     int32_t i = qr_find_first_unmatch_index(text, textLen, "0123456789", 0);
     if (i < 0) {
@@ -552,28 +464,6 @@ qr_draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
                 }
             }
         }
-    }
-}
-
-static void
-qr_print(FILE *out, QR *qr)
-{
-    for (int32_t i = -4; i <= qr->size + 4; i++) {
-        for (int32_t j = -4; j <= qr->size + 4; j++) {
-            if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
-                // Drawing frame
-                fprintf(out, "\033[47m  \033[0m");
-                continue;
-            }
-
-            if (QR_MODULE_COLOR(qr, i, j) == MC_WHITE) {
-                fprintf(out, "\033[47m  \033[0m");
-            }
-            else {
-                fprintf(out, "\033[40m  \033[0m");
-            }
-        }
-        fprintf(out, "\n");
     }
 }
 
@@ -820,7 +710,7 @@ qr_draw_version_modules(QR *qr, int32_t version)
     }
 }
 
-static QR
+QR
 qr_encode(QROptions *options)
 {
     char *text = options->text;
@@ -994,7 +884,7 @@ qr_encode(QROptions *options)
     ASSERT(shortBlockLength <= MAX_BLOCKS_LENGTH);
 
     int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
-    const uint8_t *divisor = GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
+    uint8_t *divisor = (uint8_t *)GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
 
     int32_t dataCodewordsIndex = 0;
     for (int32_t i = 0; i < blocksCount; i++) {
@@ -1016,10 +906,10 @@ qr_encode(QROptions *options)
         // Calculate error correcting codewords
         uint8_t errorCodewords[MAX_POLYNOM_DEGREE + 1] = {};
         int32_t remainderLength = gf256_polynom_divide(block,
-                                                    currBlockLength,
-                                                    divisor,
-                                                    errorCodewordsPerBlockCount + 1,
-                                                    errorCodewords);
+                                                       currBlockLength,
+                                                       divisor,
+                                                       errorCodewordsPerBlockCount + 1,
+                                                       errorCodewords);
         ASSERT(remainderLength == errorCodewordsPerBlockCount);
 
         // Copy error correcting codewords to block
@@ -1067,7 +957,11 @@ qr_encode(QROptions *options)
 
 
     // 4. Draw functional QR patterns
-    QR qr = { .size = 4 * version + 21 };
+    QR qr = {};
+    qr.size = 4 * version + 21;
+    qr.mode = mode;
+    qr.level = level;
+    qr.version = version;
 
     qr_draw_functional_patterns(&qr, version);
 
@@ -1141,4 +1035,26 @@ qr_encode(QROptions *options)
     }
 
     return qr;
+}
+
+void
+qr_print(FILE *out, QR *qr)
+{
+    for (int32_t i = -4; i <= qr->size + 4; i++) {
+        for (int32_t j = -4; j <= qr->size + 4; j++) {
+            if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
+                // Drawing frame
+                fprintf(out, "\033[47m  \033[0m");
+                continue;
+            }
+
+            if (QR_MODULE_COLOR(qr, i, j) == MC_WHITE) {
+                fprintf(out, "\033[47m  \033[0m");
+            }
+            else {
+                fprintf(out, "\033[40m  \033[0m");
+            }
+        }
+        fprintf(out, "\n");
+    }
 }

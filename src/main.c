@@ -1,15 +1,13 @@
+#include <errno.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-#include <inttypes.h>
 #include <unistd.h>
 
-#include "utils.c"
-#include "bv.c"
-#include "gf256.c"
-#include "qr.c"
+#include "utils.h"
+#include "qr.h"
 
 static void
 print_usage_and_fail(char *exe)

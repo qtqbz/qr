@@ -1,3 +1,6 @@
+#ifndef UTILS_H
+#define UTILS_H
+
 #if BUILD_DEBUG
 #define ASSERT(x)               \
     do {                        \
@@ -13,3 +16,5 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+#endif //UTILS_H

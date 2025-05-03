@@ -1,13 +1,7 @@
-#define MAX_BITS_COUNT 30000
+#include "utils.h"
+#include "bv.h"
 
-typedef struct BitVec BitVec;
-struct BitVec
-{
-    uint8_t bytes[MAX_BITS_COUNT / 8];
-    int32_t size;
-};
-
-static void
+void
 bv_print_bin(FILE *out, BitVec bv)
 {
     for (int32_t i = 0; i < bv.size; i++) {
@@ -16,7 +10,7 @@ bv_print_bin(FILE *out, BitVec bv)
     fprintf(out, "\n");
 }
 
-static void
+void
 bv_print_hex(FILE *out, BitVec bv)
 {
     for (int32_t i = 0; i < bv.size; i += 8) {
@@ -25,7 +19,7 @@ bv_print_hex(FILE *out, BitVec bv)
     fprintf(out, "\n");
 }
 
-static void
+void
 bv_append(BitVec *bv, uint64_t bits, int32_t bitsCount)
 {
     ASSERT(0 <= bitsCount && bitsCount <= 64);
