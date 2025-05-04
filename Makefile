@@ -7,7 +7,18 @@ OBJ := $(OBJDIR)/bv.o $(OBJDIR)/gf256.o $(OBJDIR)/qr.o $(OBJDIR)/main.o
 EXE := $(BINDIR)/qr
 
 CC := gcc
-CFLAGS :=  -DBUILD_DEBUG -I$(SRCDIR) -std=c23 -g3 -pedantic -Wall -Werror -Wextra -Wconversion -Wno-unused-parameter -Wno-unused-function -Wno-sign-conversion
+CFLAGS := -DBUILD_DEBUG \
+		  -I$(SRCDIR) \
+		  -std=c23 \
+		  -g3 \
+		  -pedantic \
+		  -Wall \
+		  -Werror \
+		  -Wextra \
+		  -Wconversion \
+		  -Wno-unused-parameter \
+		  -Wno-unused-function \
+		  -Wno-sign-conversion
 
 all: clean build
 

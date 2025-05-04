@@ -11,7 +11,7 @@
 
 #define ALIGNMENT_COORDINATES_COUNT 7
 
-#define QR_MODULE_VALUE(qr, row, column) ((qr)->modules[(row) * (qr)->size + (column)])
+#define QR_MODULE_VALUE(qr, row, column) ((qr)->matrix[(row) * (qr)->size + (column)])
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
 #define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
 
@@ -354,15 +354,15 @@ draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
 }
 
 static void
-draw_alignment_patterns(QR *qr, int32_t version)
+draw_alignment_patterns(QR *qr)
 {
     for (int32_t i = 0; i < ALIGNMENT_COORDINATES_COUNT; i++) {
-        int32_t rowCenter = ALIGNMENT_COORDINATES[version][i];
+        int32_t rowCenter = ALIGNMENT_COORDINATES[qr->version][i];
         if (rowCenter == 0) {
             break;
         }
         for (int32_t j = 0; j < ALIGNMENT_COORDINATES_COUNT; j++) {
-            int32_t columnCenter = ALIGNMENT_COORDINATES[version][j];
+            int32_t columnCenter = ALIGNMENT_COORDINATES[qr->version][j];
             if (columnCenter == 0) {
                 break;
             }
@@ -390,12 +390,12 @@ draw_timing_patterns(QR *qr)
 }
 
 static void
-draw_functional_patterns(QR *qr, int32_t version)
+draw_functional_patterns(QR *qr)
 {
     draw_finder_patterns(qr);
-    draw_alignment_patterns(qr, version);
+    draw_alignment_patterns(qr);
     draw_timing_patterns(qr);
-    draw_module(qr, 4 * version + 13, 8, FUNCTIONAL_BLACK); // dark module
+    draw_module(qr, 4 * qr->version + 13, 8, FUNCTIONAL_BLACK); // dark module
 }
 
 static void
@@ -413,9 +413,9 @@ reserve_format_modules(QR *qr)
 }
 
 static void
-reserve_version_modules(QR *qr, int32_t version)
+reserve_version_modules(QR *qr)
 {
-    if (version < 6) {
+    if (qr->version < 6) {
         return;
     }
     // Vertical version modules
@@ -660,9 +660,9 @@ calc_mask_penalty(QR *qr)
 }
 
 static void
-draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
+draw_format_modules(QR *qr, int32_t mask)
 {
-    uint32_t formatBits = FORMAT_BITS[level][mask];
+    uint32_t formatBits = FORMAT_BITS[qr->level][mask];
     int32_t bitIndex = 0;
     for (int32_t row = 0; row < qr->size; row++) {
         if (row == 6) {
@@ -690,14 +690,14 @@ draw_format_modules(QR *qr, ErrorCorrectionLevel level, int32_t mask)
 }
 
 static void
-draw_version_modules(QR *qr, int32_t version)
+draw_version_modules(QR *qr)
 {
-    ASSERT(MIN_VERSION <= version && version <= MAX_VERSION);
+    ASSERT(MIN_VERSION <= qr->version && qr->version <= MAX_VERSION);
 
-    if (version < 6) {
+    if (qr->version < 6) {
         return;
     }
-    uint32_t versionBits = VERSION_BITS[version];
+    uint32_t versionBits = VERSION_BITS[qr->version];
     int32_t bitIndex = 0;
 
     for (int32_t i = 0; i < 6; i++) {
@@ -710,53 +710,48 @@ draw_version_modules(QR *qr, int32_t version)
     }
 }
 
-QR
-qr_encode(QROptions *options)
+static QR
+analyse_data(char *text, int32_t textLen, ErrorCorrectionLevel forcedLevel, int32_t forcedVersion, bool isDebug)
 {
-    char *text = options->text;
-    int32_t textLen = options->textLen;
-    ErrorCorrectionLevel forcedLevel = options->forcedLevel;
-    int32_t forcedVersion = options->forcedVersion;
-    int32_t forcedMask = options->forcedMask;
-    bool isDebug = options->isDebug;
+    QR qr = {};
 
     // 1. Data analysis.
-    EncodingMode mode = get_encoding_mode(text, textLen);
+    qr.mode = get_encoding_mode(text, textLen);
 
-    ErrorCorrectionLevel level = (forcedLevel != LEVEL_INVALID) ? forcedLevel : ECL_LOW;
+    qr.level = (forcedLevel != LEVEL_INVALID) ? forcedLevel : ECL_LOW;
 
-    int32_t version = (forcedVersion != VERSION_INVALID) ? forcedVersion : get_version(mode, level, textLen);
-    if (version == VERSION_INVALID) {
+    qr.version = (forcedVersion != VERSION_INVALID) ? forcedVersion : get_version(qr.mode, qr.level, textLen);
+    if (qr.version == VERSION_INVALID) {
         fprintf(stderr,
                 "Failed to find a suitable version for a text of length %d "
                 "with %s mode "
                 "and %s error correction level\n",
                 textLen,
-                EncodingModeNames[mode],
-                ErrorCorrectionLevelNames[level]);
+                EncodingModeNames[qr.mode],
+                ErrorCorrectionLevelNames[qr.level]);
         exit(1);
     }
 
     if (forcedLevel == LEVEL_INVALID) {
         // Try to increase the error correction level while still staying in the same version.
-        for (ErrorCorrectionLevel newLevel = level + 1; newLevel <= ECL_HIGH; newLevel++) {
-            if (textLen > MAX_CHAR_COUNT[mode][newLevel][version]) {
+        for (ErrorCorrectionLevel newLevel = qr.level + 1; newLevel <= ECL_HIGH; newLevel++) {
+            if (textLen > MAX_CHAR_COUNT[qr.mode][newLevel][qr.version]) {
                 break;
             }
-            level = newLevel;
+            qr.level = newLevel;
         }
     }
 
-    if (textLen > MAX_CHAR_COUNT[mode][level][version]) {
+    if (textLen > MAX_CHAR_COUNT[qr.mode][qr.level][qr.version]) {
         fprintf(stderr,
                 "The text exceeds the length limit of %d characters "
                 "for %s mode "
                 "and %s error correction level "
                 "and version %d\n",
-                MAX_CHAR_COUNT[mode][level][version],
-                EncodingModeNames[mode],
-                ErrorCorrectionLevelNames[level],
-                version);
+                MAX_CHAR_COUNT[qr.mode][qr.level][qr.version],
+                EncodingModeNames[qr.mode],
+                ErrorCorrectionLevelNames[qr.level],
+                qr.version);
         exit(1);
     }
 
@@ -777,25 +772,29 @@ qr_encode(QROptions *options)
         }
         fprintf(stderr, "\n");
         fprintf(stderr, "Text length: %d\n", textLen);
-        fprintf(stderr, "Encoding mode: %s\n", EncodingModeNames[mode]);
-        fprintf(stderr, "QR version: %d\n", version + 1);
-        fprintf(stderr, "Error correction level: %s\n", ErrorCorrectionLevelNames[level]);
+        fprintf(stderr, "Encoding mode: %s\n", EncodingModeNames[qr.mode]);
+        fprintf(stderr, "QR version: %d\n", qr.version + 1);
+        fprintf(stderr, "Error correction level: %s\n", ErrorCorrectionLevelNames[qr.level]);
         fprintf(stderr, "\n");
     }
+    return qr;
+}
 
-
+static BitVec
+encode_data(QR* qr, char *text, int32_t textLen, bool isDebug)
+{
     // 2. Data Encoding
     BitVec bv = {};
 
     // Encoding mode
-    bv_append(&bv, (1U) << mode, 4);
+    bv_append(&bv, (1U) << qr->mode, 4);
 
     // Text length
-    int32_t lengthBitCount = LENGTH_BITS_COUNT[mode][version];
+    int32_t lengthBitCount = LENGTH_BITS_COUNT[qr->mode][qr->version];
     bv_append(&bv, textLen, lengthBitCount);
 
     // Text itself
-    if (mode == EM_NUMERIC) {
+    if (qr->mode == EM_NUMERIC) {
         int32_t number = 0;
         for (int32_t i = 0; i < textLen; i++) {
             uint8_t ch = text[i];
@@ -807,7 +806,7 @@ qr_encode(QROptions *options)
             }
         }
     }
-    else if (mode == EM_ALPHANUM) {
+    else if (qr->mode == EM_ALPHANUM) {
         int32_t number = 0;
         for (int32_t i = 0; i < textLen; i++) {
             uint8_t ch = text[i];
@@ -839,7 +838,7 @@ qr_encode(QROptions *options)
         }
     }
 
-    int32_t dataCodewordsCount = calc_data_codewords_count(version, level);
+    int32_t dataCodewordsCount = calc_data_codewords_count(qr->version, qr->level);
     int32_t dataModulesCount = dataCodewordsCount * 8;
 
     // Terminator zeros
@@ -868,22 +867,27 @@ qr_encode(QROptions *options)
         fprintf(stderr, "\n");
     }
 
+    return bv;
+}
 
+static int32_t
+prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
+{
     // 3. Error correction coding
     uint8_t blocks[MAX_BLOCKS_COUNT][MAX_BLOCKS_LENGTH] = {};
 
     // Divide data codewords into blocks and calculate error correction codewords for them
-    uint8_t *dataCodewords = bv.bytes;
-    int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
+    uint8_t *dataCodewords = bv->bytes;
+    int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[qr->version] / 8;
 
-    int32_t blocksCount = ERROR_CORRECTION_BLOCKS_COUNT[level][version];
+    int32_t blocksCount = ERROR_CORRECTION_BLOCKS_COUNT[qr->level][qr->version];
     ASSERT(blocksCount <= MAX_BLOCKS_COUNT);
 
     int32_t shortBlocksCount = blocksCount - (contentCodewordsCount % blocksCount);
     int32_t shortBlockLength = contentCodewordsCount / blocksCount;
     ASSERT(shortBlockLength <= MAX_BLOCKS_LENGTH);
 
-    int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[level][version];
+    int32_t errorCodewordsPerBlockCount = ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[qr->level][qr->version];
     uint8_t *divisor = (uint8_t *)GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
 
     int32_t dataCodewordsIndex = 0;
@@ -920,15 +924,14 @@ qr_encode(QROptions *options)
     }
 
     // Interleave codewords
-    uint8_t interleavedCodewords[MAX_BLOCKS_COUNT * MAX_BLOCKS_LENGTH] = {};
-    int32_t interleavedCodewordsCount = 0;
+    int32_t codewordsCount = 0;
     for (int32_t i = 0; i < (shortBlockLength + 1); i++) {
         for (int32_t j = 0; j < blocksCount; j++) {
             if (j < shortBlocksCount && i == (shortBlockLength - errorCodewordsPerBlockCount)) {
                 // skip the padding on shorter blocks
                 continue;
             }
-            interleavedCodewords[interleavedCodewordsCount++] = blocks[j][i];
+            codewords[codewordsCount++] = blocks[j][i];
         }
     }
 
@@ -947,92 +950,109 @@ qr_encode(QROptions *options)
         }
 
         fprintf(stderr, "Interleaved codewords: ");
-        for (int32_t i = 0; i < interleavedCodewordsCount; i++) {
-            fprintf(stderr, "%02X ", interleavedCodewords[i]);
+        for (int32_t i = 0; i < codewordsCount; i++) {
+            fprintf(stderr, "%02X ", codewords[i]);
         }
         fprintf(stderr, "\n");
 
         fprintf(stderr, "\n");
     }
 
+    return codewordsCount;
+}
 
-    // 4. Draw functional QR patterns
-    QR qr = {};
-    qr.size = 4 * version + 21;
-    qr.mode = mode;
-    qr.level = level;
-    qr.version = version;
+static void
+draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMask, bool isDebug)
+{
+    // Draw functional QR patterns
+    qr->size = 4 * qr->version + 21;
 
-    draw_functional_patterns(&qr, version);
+    draw_functional_patterns(qr);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FUNCTIONAL PATTERNS\n");
-        qr_print(stderr, &qr);
+        qr_print(stderr, qr);
         fprintf(stderr, "\n");
     }
 
-
-    // 5. Reserve format & version modules
-    reserve_format_modules(&qr);
-    reserve_version_modules(&qr, version);
+    // Reserve format & version modules
+    reserve_format_modules(qr);
+    reserve_version_modules(qr);
 
     if (isDebug) {
         fprintf(stderr, ">>> RESERVING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, &qr);
+        qr_print(stderr, qr);
         fprintf(stderr, "\n");
     }
 
-
-    // 6. Draw QR data
-    draw_data(&qr, interleavedCodewords, interleavedCodewordsCount);
+    // Draw QR data
+    draw_data(qr, codewords, codewordsCount);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING DATA MODULES\n");
-        qr_print(stderr, &qr);
+        qr_print(stderr, qr);
         fprintf(stderr, "\n");
     }
 
-
-    // 7. Apply data masking
+    // Apply data masking
     int32_t minPenalty = INT32_MAX;
     int32_t bestMask = 0;
     if (forcedMask == MASK_INVALID) {
         for (int32_t mask = 0; mask < MASK_COUNT; mask++) {
-            draw_format_modules(&qr, level, mask);
-            draw_version_modules(&qr, version);
-            apply_mask(&qr, mask);
+            draw_format_modules(qr, mask);
+            draw_version_modules(qr);
+            apply_mask(qr, mask);
 
-            int32_t penalty = calc_mask_penalty(&qr);
+            int32_t penalty = calc_mask_penalty(qr);
             if (penalty < minPenalty) {
                 minPenalty = penalty;
                 bestMask = mask;
             }
 
             // re-applying reverts the mask
-            apply_mask(&qr, mask);
+            apply_mask(qr, mask);
         }
     }
     else {
         bestMask = forcedMask;
     }
-    apply_mask(&qr, bestMask);
+    apply_mask(qr, bestMask);
 
     if (isDebug) {
         fprintf(stderr, ">>> APPLYING DATA MASK %d\n", bestMask);
-        qr_print(stderr, &qr);
+        qr_print(stderr, qr);
         fprintf(stderr, "\n");
     }
 
-
-    // 8. Draw QR format and version
-    draw_format_modules(&qr, level, bestMask);
-    draw_version_modules(&qr, version);
+    // Draw QR format and version
+    draw_format_modules(qr, bestMask);
+    draw_version_modules(qr);
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, &qr);
+        qr_print(stderr, qr);
         fprintf(stderr, "\n");
     }
+}
+
+QR
+qr_encode(QROptions *options)
+{
+    char *text = options->text;
+    int32_t textLen = options->textLen;
+    ErrorCorrectionLevel forcedLevel = options->forcedLevel;
+    int32_t forcedVersion = options->forcedVersion;
+    bool isDebug = options->isDebug;
+
+    QR qr = analyse_data(text, textLen, forcedLevel, forcedVersion, isDebug);
+
+    BitVec bv = encode_data(&qr, text, textLen, isDebug);
+
+    uint8_t codewords[MAX_BLOCKS_COUNT * MAX_BLOCKS_LENGTH] = {};
+    int32_t codewordsCount = prepare_codewords(&qr, &bv, codewords, isDebug);
+
+    int32_t forcedMask = options->forcedMask;
+    draw_matrix(&qr, codewords, codewordsCount, forcedMask, isDebug);
 
     return qr;
 }

@@ -92,7 +92,7 @@ struct QROptions
 typedef struct QR QR;
 struct QR
 {
-    ModuleValue modules[MAX_MODULE_COUNT];
+    ModuleValue matrix[MAX_MODULE_COUNT];
     int32_t size;
     EncodingMode mode;
     ErrorCorrectionLevel level;
