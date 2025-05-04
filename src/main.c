@@ -19,6 +19,7 @@ print_usage_and_fail(char *exe)
     fprintf(stderr, "    -l LEVEL   Force error correction level from 0 (Low) to 3 (High).\n");
     fprintf(stderr, "    -v VERSION Force QR version from 1 to 40.\n");
     fprintf(stderr, "    -m MASK    Force mask pattern from 0 to 7.\n");
+    fprintf(stderr, "    -a         Print QR code in ASCII.\n");
     fprintf(stderr, "    -d         Print debugging messages to STDERR.\n");
     fprintf(stderr, "If neither -t nor -f is specified, encodes the data read from STDIN.\n");
     exit(1);
@@ -31,6 +32,7 @@ parse_options(int32_t argc, char **argv)
     options.forcedLevel = LEVEL_INVALID;
     options.forcedVersion = VERSION_INVALID;
     options.forcedMask = MASK_INVALID;
+    options.format = OF_ANSI_COLOR;
     options.isDebug = false;
 
     char *exe = argv[0];
@@ -108,6 +110,9 @@ parse_options(int32_t argc, char **argv)
             case 'd': {
                 options.isDebug = true;
             } break;
+            case 'a': {
+                options.format = OF_ASCII;
+            } break;
             default: {
                 fprintf(stderr, "Unknown option: %c\n", argv[i][1]);
                 print_usage_and_fail(exe);
@@ -162,7 +167,7 @@ main(int32_t argc, char **argv)
     QR qr = qr_encode(&options);
 
     printf("\n");
-    qr_print(stdout, &qr);
+    qr_print(stdout, &qr, options.format);
     printf("\n");
 
     return 0;

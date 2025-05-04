@@ -999,7 +999,7 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
 }
 
 static void
-draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMask, bool isDebug)
+draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMask, OutputFormat format, bool isDebug)
 {
     // Draw functional QR patterns
     qr->size = 4 * qr->version + 21;
@@ -1008,7 +1008,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FUNCTIONAL PATTERNS\n");
-        qr_print(stderr, qr);
+        qr_print(stderr, qr, format);
         fprintf(stderr, "\n");
     }
 
@@ -1018,7 +1018,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> RESERVING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, qr);
+        qr_print(stderr, qr, format);
         fprintf(stderr, "\n");
     }
 
@@ -1027,7 +1027,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING DATA MODULES\n");
-        qr_print(stderr, qr);
+        qr_print(stderr, qr, format);
         fprintf(stderr, "\n");
     }
 
@@ -1057,7 +1057,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> APPLYING DATA MASK %d\n", bestMask);
-        qr_print(stderr, qr);
+        qr_print(stderr, qr, format);
         fprintf(stderr, "\n");
     }
 
@@ -1067,7 +1067,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, qr);
+        qr_print(stderr, qr, format);
         fprintf(stderr, "\n");
     }
 }
@@ -1089,28 +1089,39 @@ qr_encode(QROptions *options)
     int32_t codewordsCount = prepare_codewords(&qr, &bv, codewords, isDebug);
 
     int32_t forcedMask = options->forcedMask;
-    draw_matrix(&qr, codewords, codewordsCount, forcedMask, isDebug);
+    OutputFormat format = options->format;
+    draw_matrix(&qr, codewords, codewordsCount, forcedMask, format, isDebug);
 
     return qr;
 }
 
+static void
+print_color(FILE *out, ModuleColor color, OutputFormat format)
+{
+    switch (format) {
+        case OF_ANSI_COLOR: {
+            fprintf(out, "%s", (color == MC_WHITE) ? "\033[47m  \033[0m" : "\033[40m  \033[0m");
+        } break;
+        case OF_ASCII: {
+            fprintf(out, "%s", (color == MC_WHITE) ? "  " : "##");
+        } break;
+        default: {
+            ASSERT(false); // unreachable
+        }
+    }
+}
+
 void
-qr_print(FILE *out, QR *qr)
+qr_print(FILE *out, QR *qr, OutputFormat format)
 {
     for (int32_t i = -4; i <= qr->size + 4; i++) {
         for (int32_t j = -4; j <= qr->size + 4; j++) {
             if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
                 // Drawing frame
-                fprintf(out, "\033[47m  \033[0m");
+                print_color(out, MC_WHITE, format);
                 continue;
             }
-
-            if (QR_MODULE_COLOR(qr, i, j) == MC_WHITE) {
-                fprintf(out, "\033[47m  \033[0m");
-            }
-            else {
-                fprintf(out, "\033[40m  \033[0m");
-            }
+            print_color(out, QR_MODULE_COLOR(qr, i, j), format);
         }
         fprintf(out, "\n");
     }

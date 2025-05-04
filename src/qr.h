@@ -78,6 +78,13 @@ struct ModuleValue
     ModuleColor color;
 };
 
+typedef int32_t OutputFormat;
+enum OutputFormat
+{
+    OF_ANSI_COLOR,
+    OF_ASCII,
+};
+
 typedef struct QROptions QROptions;
 struct QROptions
 {
@@ -86,6 +93,7 @@ struct QROptions
     ErrorCorrectionLevel forcedLevel;
     int32_t forcedVersion;
     int32_t forcedMask;
+    OutputFormat format;
     bool isDebug;
 };
 
@@ -100,6 +108,6 @@ struct QR
 };
 
 QR qr_encode(QROptions *options);
-void qr_print(FILE *out, QR *qr);
+void qr_print(FILE *out, QR *qr, OutputFormat format);
 
 #endif //QR_H
