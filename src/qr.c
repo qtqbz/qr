@@ -1163,13 +1163,9 @@ print_utf8(FILE *out, QR *qr) {
                 color0 = MC_WHITE;
                 color1 = MC_WHITE;
             }
-            else if (row == qr->size - 1) {
-                color0 = QR_MODULE_COLOR(qr, row, column);
-                color1 = MC_WHITE;
-            }
             else {
-                color0 = QR_MODULE_COLOR(qr, row + 0, column);
-                color1 = QR_MODULE_COLOR(qr, row + 1, column);
+                color0 = QR_MODULE_COLOR(qr, row, column);
+                color1 = (row == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row + 1, column);
             }
             int32_t colors = color1 << 1 | color0;
             switch (colors) {
@@ -1198,23 +1194,12 @@ print_utf8q(FILE *out, QR *qr) {
                 color2 = MC_WHITE;
                 color3 = MC_WHITE;
             }
-            else if (row == qr->size - 1) {
-                color0 = QR_MODULE_COLOR(qr, row, column + 0);
-                color1 = QR_MODULE_COLOR(qr, row, column + 1);
-                color2 = MC_WHITE;
-                color3 = MC_WHITE;
-            }
-            else if (column == qr->size - 1) {
-                color0 = QR_MODULE_COLOR(qr, row + 0, column);
-                color1 = MC_WHITE;
-                color2 = QR_MODULE_COLOR(qr, row + 1, column);
-                color3 = MC_WHITE;
-            }
             else {
-                color0 = QR_MODULE_COLOR(qr, row + 0, column + 0);
-                color1 = QR_MODULE_COLOR(qr, row + 0, column + 1);
-                color2 = QR_MODULE_COLOR(qr, row + 1, column + 0);
-                color3 = QR_MODULE_COLOR(qr, row + 1, column + 1);
+                color0 = QR_MODULE_COLOR(qr, row, column);
+                color1 = (column == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row, column + 1);
+                color2 = (row == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row + 1, column);
+                color3 = (row == qr->size - 1) || (column == qr->size - 1) ? MC_WHITE
+                                                                           : QR_MODULE_COLOR(qr, row + 1, column + 1);
             }
             int32_t colors = color3 << 3 | color2 << 2 | color1 << 1 | color0;
             switch (colors) {
