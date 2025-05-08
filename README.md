@@ -28,7 +28,7 @@ Where OPTION is one of the following:
     -l LEVEL   Force error correction level, where VERSION is a number from 0 (Low) to 3 (High).
     -v VERSION Force QR version, where VERSION is a number from 1 to 40.
     -m MASK    Force mask pattern, where MASK is a number from 0 to 7.
-    -o FORMAT  Output format, where FORMAT is one of: ANSI, ASCII.
+    -o FORMAT  Output format, where FORMAT is one of: ANSI, ASCII, UTF8, UTF8Q. Defaults to UTF8.
     -d         Print debugging messages to STDERR.
 If neither -t nor -f is specified, encodes the data read from STDIN.
 ```

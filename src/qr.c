@@ -1114,33 +1114,141 @@ qr_encode(QROptions *options)
 }
 
 static void
-print_color(FILE *out, ModuleColor color, OutputFormat outputFormat)
+print_ansi(FILE *out, QR *qr)
 {
-    switch (outputFormat) {
-        case OF_ANSI: {
-            fprintf(out, "%s", (color == MC_WHITE) ? "\033[47m  \033[0m" : "\033[40m  \033[0m");
-        } break;
-        case OF_ASCII: {
-            fprintf(out, "%s", (color == MC_WHITE) ? "  " : "##");
-        } break;
-        default: {
-            ASSERT(false); // unreachable
+    for (int32_t row = -4; row < qr->size + 4; row++) {
+        for (int32_t column = -4; column < qr->size + 4; column++) {
+            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+                fprintf(out, "\033[47m  \033[0m"); // printing frame
+                continue;
+            }
+            if (QR_MODULE_COLOR(qr, row, column) == MC_WHITE) {
+                fprintf(out, "\033[47m  \033[0m");
+            }
+            else {
+                fprintf(out, "\033[40m  \033[0m");
+            }
         }
+        fprintf(out, "\n");
+    }
+}
+
+static void
+print_ascii(FILE *out, QR *qr)
+{
+    for (int32_t row = -4; row < qr->size + 4; row++) {
+        for (int32_t column = -4; column < qr->size + 4; column++) {
+            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+                fprintf(out, "  "); // printing frame
+                continue;
+            }
+            if (QR_MODULE_COLOR(qr, row, column) == MC_WHITE) {
+                fprintf(out, "  ");
+            }
+            else {
+                fprintf(out, "##");
+            }
+        }
+        fprintf(out, "\n");
+    }
+}
+
+static void
+print_utf8(FILE *out, QR *qr) {
+    for (int32_t row = -4; row < qr->size + 4; row += 2) {
+        for (int32_t column = -4; column < qr->size + 4; column++) {
+            ModuleColor color0;
+            ModuleColor color1;
+            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+                color0 = MC_WHITE;
+                color1 = MC_WHITE;
+            }
+            else if (row == qr->size - 1) {
+                color0 = QR_MODULE_COLOR(qr, row, column);
+                color1 = MC_WHITE;
+            }
+            else {
+                color0 = QR_MODULE_COLOR(qr, row + 0, column);
+                color1 = QR_MODULE_COLOR(qr, row + 1, column);
+            }
+            int32_t colors = color1 << 1 | color0;
+            switch (colors) {
+                case 0b00: fprintf(out, "%s", "█"); break;
+                case 0b01: fprintf(out, "%s", "▄"); break;
+                case 0b10: fprintf(out, "%s", "▀"); break;
+                case 0b11: fprintf(out, "%s", " "); break;
+                default: ASSERT(false); // unreachable
+            }
+        }
+        fprintf(out, "\n");
+    }
+}
+
+static void
+print_utf8q(FILE *out, QR *qr) {
+    for (int32_t row = -4; row < qr->size + 4; row += 2) {
+        for (int32_t column = -4; column < qr->size + 4; column += 2) {
+            ModuleColor color0;
+            ModuleColor color1;
+            ModuleColor color2;
+            ModuleColor color3;
+            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+                color0 = MC_WHITE;
+                color1 = MC_WHITE;
+                color2 = MC_WHITE;
+                color3 = MC_WHITE;
+            }
+            else if (row == qr->size - 1) {
+                color0 = QR_MODULE_COLOR(qr, row, column + 0);
+                color1 = QR_MODULE_COLOR(qr, row, column + 1);
+                color2 = MC_WHITE;
+                color3 = MC_WHITE;
+            }
+            else if (column == qr->size - 1) {
+                color0 = QR_MODULE_COLOR(qr, row + 0, column);
+                color1 = MC_WHITE;
+                color2 = QR_MODULE_COLOR(qr, row + 1, column);
+                color3 = MC_WHITE;
+            }
+            else {
+                color0 = QR_MODULE_COLOR(qr, row + 0, column + 0);
+                color1 = QR_MODULE_COLOR(qr, row + 0, column + 1);
+                color2 = QR_MODULE_COLOR(qr, row + 1, column + 0);
+                color3 = QR_MODULE_COLOR(qr, row + 1, column + 1);
+            }
+            int32_t colors = color3 << 3 | color2 << 2 | color1 << 1 | color0;
+            switch (colors) {
+                case 0b0000: fprintf(out, "%s", "█"); break;
+                case 0b0001: fprintf(out, "%s", "▟"); break;
+                case 0b0010: fprintf(out, "%s", "▙"); break;
+                case 0b0011: fprintf(out, "%s", "▄"); break;
+                case 0b0100: fprintf(out, "%s", "▜"); break;
+                case 0b0101: fprintf(out, "%s", "▐"); break;
+                case 0b0110: fprintf(out, "%s", "▚"); break;
+                case 0b0111: fprintf(out, "%s", "▗"); break;
+                case 0b1000: fprintf(out, "%s", "▛"); break;
+                case 0b1001: fprintf(out, "%s", "▞"); break;
+                case 0b1010: fprintf(out, "%s", "▌"); break;
+                case 0b1011: fprintf(out, "%s", "▖"); break;
+                case 0b1100: fprintf(out, "%s", "▀"); break;
+                case 0b1101: fprintf(out, "%s", "▝"); break;
+                case 0b1110: fprintf(out, "%s", "▘"); break;
+                case 0b1111: fprintf(out, "%s", " "); break;
+                default: ASSERT(false); // unreachable
+            }
+        }
+        fprintf(out, "\n");
     }
 }
 
 void
 qr_print(FILE *out, QR *qr, OutputFormat outputFormat)
 {
-    for (int32_t i = -4; i < qr->size + 4; i++) {
-        for (int32_t j = -4; j < qr->size + 4; j++) {
-            if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
-                // Drawing frame
-                print_color(out, MC_WHITE, outputFormat);
-                continue;
-            }
-            print_color(out, QR_MODULE_COLOR(qr, i, j), outputFormat);
-        }
-        fprintf(out, "\n");
+    switch (outputFormat) {
+        case OF_ANSI: print_ansi(out, qr); break;
+        case OF_ASCII: print_ascii(out, qr); break;
+        case OF_UTF8: print_utf8(out, qr); break;
+        case OF_UTF8Q: print_utf8q(out, qr); break;
+        default: ASSERT(false); // unreachable
     }
 }

@@ -81,9 +81,10 @@ struct ModuleValue
 typedef int32_t OutputFormat;
 enum OutputFormat
 {
-    OF_INVALID,
     OF_ANSI,
     OF_ASCII,
+    OF_UTF8,
+    OF_UTF8Q,
 };
 
 typedef struct QROptions QROptions;
