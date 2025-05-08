@@ -12,17 +12,29 @@
 static void
 print_usage_and_fail(char *exe)
 {
-    fprintf(stderr, "Usage: %s [OPTIONS]\n", exe);
-    fprintf(stderr, "OPTIONS:\n");
+    fprintf(stderr, "Usage: %s [OPTION]...\n", exe);
+    fprintf(stderr, "Where OPTION is one of the following:\n");
     fprintf(stderr, "    -t TEXT    Encode the given TEXT. Cannot be combined with -f.\n");
     fprintf(stderr, "    -f FILE    Encode the content of FILE. Cannot be combined with -t.\n");
-    fprintf(stderr, "    -l LEVEL   Force error correction level from 0 (Low) to 3 (High).\n");
-    fprintf(stderr, "    -v VERSION Force QR version from 1 to 40.\n");
-    fprintf(stderr, "    -m MASK    Force mask pattern from 0 to 7.\n");
-    fprintf(stderr, "    -a         Print QR code in ASCII.\n");
+    fprintf(stderr, "    -l LEVEL   Force error correction level, where VERSION is a number from 0 (Low) to 3 (High).\n");
+    fprintf(stderr, "    -v VERSION Force QR version, where VERSION is a number from 1 to 40.\n");
+    fprintf(stderr, "    -m MASK    Force mask pattern, where MASK is a number from 0 to 7.\n");
+    fprintf(stderr, "    -o FORMAT  Output format, where FORMAT is one of: ANSI, ASCII.\n");
     fprintf(stderr, "    -d         Print debugging messages to STDERR.\n");
     fprintf(stderr, "If neither -t nor -f is specified, encodes the data read from STDIN.\n");
     exit(1);
+}
+
+static OutputFormat
+parse_output_format(char *str)
+{
+    if (strcmp(str, "ANSI") == 0) {
+        return OF_ANSI;
+    }
+    if (strcmp(str, "ASCII") == 0) {
+        return OF_ASCII;
+    }
+    return OF_INVALID;
 }
 
 static QROptions
@@ -32,7 +44,7 @@ parse_options(int32_t argc, char **argv)
     options.forcedLevel = LEVEL_INVALID;
     options.forcedVersion = VERSION_INVALID;
     options.forcedMask = MASK_INVALID;
-    options.format = OF_ANSI_COLOR;
+    options.outputFormat = OF_ANSI;
     options.isDebug = false;
 
     char *exe = argv[0];
@@ -107,14 +119,24 @@ parse_options(int32_t argc, char **argv)
                 }
                 options.forcedMask = (int32_t)mask;
             } break;
+            case 'o': {
+                if (++i >= argc) {
+                    fprintf(stderr, "Missing FORMAT\n");
+                    print_usage_and_fail(exe);
+                }
+                char *outputFormatString = argv[i];
+                OutputFormat outputFormat = parse_output_format(outputFormatString);
+                if (outputFormat == OF_INVALID) {
+                    fprintf(stderr, "Invalid output format: %s\n", outputFormatString);
+                    print_usage_and_fail(exe);
+                }
+                options.outputFormat = outputFormat;
+            } break;
             case 'd': {
                 options.isDebug = true;
             } break;
-            case 'a': {
-                options.format = OF_ASCII;
-            } break;
             default: {
-                fprintf(stderr, "Unknown option: %c\n", argv[i][1]);
+                fprintf(stderr, "Unknown option: %c\n", option[1]);
                 print_usage_and_fail(exe);
             }
         }
@@ -165,10 +187,6 @@ main(int32_t argc, char **argv)
 {
     QROptions options = parse_options(argc, argv);
     QR qr = qr_encode(&options);
-
-    printf("\n");
-    qr_print(stdout, &qr, options.format);
-    printf("\n");
-
+    qr_print(stdout, &qr, options.outputFormat);
     return 0;
 }

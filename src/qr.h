@@ -32,10 +32,10 @@ enum EncodingMode
 };
 
 static const char *const EncodingModeNames[EM_COUNT] = {
-    "NUMERIC (0001)",
-    "ALPHANUMERIC (0010)",
-    "BYTE (0100)",
-    //"KANJI (1000)",
+    "NUMERIC",
+    "ALPHANUMERIC",
+    "BYTE",
+    //"KANJI",
 };
 
 typedef int32_t ErrorCorrectionLevel;
@@ -81,7 +81,8 @@ struct ModuleValue
 typedef int32_t OutputFormat;
 enum OutputFormat
 {
-    OF_ANSI_COLOR,
+    OF_INVALID,
+    OF_ANSI,
     OF_ASCII,
 };
 
@@ -93,7 +94,7 @@ struct QROptions
     ErrorCorrectionLevel forcedLevel;
     int32_t forcedVersion;
     int32_t forcedMask;
-    OutputFormat format;
+    OutputFormat outputFormat;
     bool isDebug;
 };
 
@@ -108,6 +109,6 @@ struct QR
 };
 
 QR qr_encode(QROptions *options);
-void qr_print(FILE *out, QR *qr, OutputFormat format);
+void qr_print(FILE *out, QR *qr, OutputFormat outputFormat);
 
 #endif //QR_H

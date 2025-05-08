@@ -30,7 +30,10 @@ build: $(OBJ)
 	mkdir -p $(BINDIR)
 	$(CC) -o $(EXE) $^ $(CFLAGS)
 
+test: build
+	./tests_run.sh
+
 clean:
 	rm -f $(OBJDIR)/*.o $(EXE)
 
-.PHONY: all clean build
+.PHONY: all clean build test

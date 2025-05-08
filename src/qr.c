@@ -617,50 +617,56 @@ calc_rule3_penalty(QR *qr)
 {
     int32_t penalty = 0;
     for (int32_t row = 0; row < qr->size; row++) {
-        for (int32_t column = 0; column < qr->size - 7; column++) {
-            if ((QR_MODULE_COLOR(qr, row, column + 0) == 1)
-                && (QR_MODULE_COLOR(qr, row, column + 1) == 0)
-                && (QR_MODULE_COLOR(qr, row, column + 2) == 1)
-                && (QR_MODULE_COLOR(qr, row, column + 3) == 1)
-                && (QR_MODULE_COLOR(qr, row, column + 4) == 1)
-                && (QR_MODULE_COLOR(qr, row, column + 5) == 0)
-                && (QR_MODULE_COLOR(qr, row, column + 6) == 1)) {
+        for (int32_t column = 0; column < qr->size - 6; column++) {
+            if ((QR_MODULE_COLOR(qr, row, column + 0) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row, column + 1) == MC_WHITE)
+                && (QR_MODULE_COLOR(qr, row, column + 2) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row, column + 3) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row, column + 4) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row, column + 5) == MC_WHITE)
+                && (QR_MODULE_COLOR(qr, row, column + 6) == MC_BLACK)) {
                 int32_t preWhiteModuleCount = 0;
                 int32_t postWhiteModuleCount = 0;
                 for (int32_t i = 1; i <= 4; i++) {
-                    if (((column - i) < 0) || (QR_MODULE_COLOR(qr, row, column - i) == MC_WHITE)) {
+                    if (((column - i) >= 0) && (QR_MODULE_COLOR(qr, row, column - i) == MC_WHITE)) {
                         preWhiteModuleCount++;
                     }
-                    if (((column + 6 + i) >= qr->size) || (QR_MODULE_COLOR(qr, row, column + 6 + i) == MC_WHITE)) {
+                    if (((column + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row, column + 6 + i) == MC_WHITE)) {
                         postWhiteModuleCount++;
                     }
                 }
-                if ((preWhiteModuleCount == 4) || (postWhiteModuleCount == 4)) {
+                if (preWhiteModuleCount == 4) {
+                    penalty += 40;
+                }
+                if (postWhiteModuleCount == 4) {
                     penalty += 40;
                 }
             }
         }
     }
     for (int32_t column = 0; column < qr->size; column++) {
-        for (int32_t row = 0; row < qr->size - 7; row++) {
-            if ((QR_MODULE_COLOR(qr, row + 0, column) == 1)
-                && (QR_MODULE_COLOR(qr, row + 1, column) == 0)
-                && (QR_MODULE_COLOR(qr, row + 2, column) == 1)
-                && (QR_MODULE_COLOR(qr, row + 3, column) == 1)
-                && (QR_MODULE_COLOR(qr, row + 4, column) == 1)
-                && (QR_MODULE_COLOR(qr, row + 5, column) == 0)
-                && (QR_MODULE_COLOR(qr, row + 6, column) == 1)) {
+        for (int32_t row = 0; row < qr->size - 6; row++) {
+            if ((QR_MODULE_COLOR(qr, row + 0, column) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row + 1, column) == MC_WHITE)
+                && (QR_MODULE_COLOR(qr, row + 2, column) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row + 3, column) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row + 4, column) == MC_BLACK)
+                && (QR_MODULE_COLOR(qr, row + 5, column) == MC_WHITE)
+                && (QR_MODULE_COLOR(qr, row + 6, column) == MC_BLACK)) {
                 int32_t preWhiteModuleCount = 0;
                 int32_t postWhiteModuleCount = 0;
                 for (int32_t i = 1; i <= 4; i++) {
-                    if (((row - i) < 0) || (QR_MODULE_COLOR(qr, row - i, column) == MC_WHITE)) {
+                    if (((row - i) >= 0) && (QR_MODULE_COLOR(qr, row - i, column) == MC_WHITE)) {
                         preWhiteModuleCount++;
                     }
-                    if (((row + 6 + i) >= qr->size) || (QR_MODULE_COLOR(qr, row + 6 + i, column) == MC_WHITE)) {
+                    if (((row + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row + 6 + i, column) == MC_WHITE)) {
                         postWhiteModuleCount++;
                     }
                 }
-                if ((preWhiteModuleCount == 4) || (postWhiteModuleCount == 4)) {
+                if (preWhiteModuleCount == 4) {
+                    penalty += 40;
+                }
+                if (postWhiteModuleCount == 4) {
                     penalty += 40;
                 }
             }
@@ -675,7 +681,7 @@ calc_rule4_penalty(QR *qr)
     int32_t totalModuleCount = qr->size * qr->size;
     int32_t blackModuleCount = 0;
     for (int32_t row = 0; row < qr->size; row++) {
-        for (int32_t column = 0; column < qr->size - 11; column++) {
+        for (int32_t column = 0; column < qr->size; column++) {
             if (QR_MODULE_COLOR(qr, row, column) == MC_BLACK) {
                 blackModuleCount++;
             }
@@ -804,6 +810,7 @@ analyse_data(char *text, int32_t textLen, ErrorCorrectionLevel forcedLevel, int3
                 case '\r': fprintf(stderr, "\\r"); break;
                 case '\t': fprintf(stderr, "\\t"); break;
                 case '\v': fprintf(stderr, "\\v"); break;
+                case ' ': fprintf(stderr, "\\ "); break;
                 default: fprintf(stderr, "%c", text[i]);
             }
         }
@@ -849,8 +856,8 @@ encode_data(QR* qr, char *text, int32_t textLen, bool isDebug)
             uint8_t ch = text[i];
 
             int32_t addend = 0;
-            if (ch <= '9') addend = ch - '0';
-            else if (ch <= 'Z') addend = ch - 'A' + 10;
+            if (ch >= '0' && ch <= '9') addend = ch - '0';
+            else if (ch >= 'A' && ch <= 'Z') addend = ch - 'A' + 10;
             else if (ch == ' ') addend = 36;
             else if (ch == '$') addend = 37;
             else if (ch == '%') addend = 38;
@@ -864,7 +871,7 @@ encode_data(QR* qr, char *text, int32_t textLen, bool isDebug)
 
             number = number * 45 + addend;
             if (((i % 2) == 1) || (i == (textLen - 1))) {
-                bv_append(&bv, number, (number >= 45) ? 11 : 6);
+                bv_append(&bv, number, ((i % 2) == 1) ? 11 : 6);
                 number = 0;
             }
         }
@@ -945,7 +952,7 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
         }
 
         // Calculate error correcting codewords
-        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + 1] = {};
+        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + MAX_GENERATOR_POLYNOM_DEGREE + 1] = {};
         int32_t remainderLength = gf256_polynom_divide(block,
                                                        currBlockLength,
                                                        divisor,
@@ -999,7 +1006,12 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
 }
 
 static void
-draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMask, OutputFormat format, bool isDebug)
+draw_matrix(QR *qr,
+            uint8_t *codewords,
+            int32_t codewordsCount,
+            int32_t forcedMask,
+            OutputFormat outputFormat,
+            bool isDebug)
 {
     // Draw functional QR patterns
     qr->size = 4 * qr->version + 21;
@@ -1008,7 +1020,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FUNCTIONAL PATTERNS\n");
-        qr_print(stderr, qr, format);
+        qr_print(stderr, qr, outputFormat);
         fprintf(stderr, "\n");
     }
 
@@ -1018,7 +1030,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> RESERVING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, qr, format);
+        qr_print(stderr, qr, outputFormat);
         fprintf(stderr, "\n");
     }
 
@@ -1027,7 +1039,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING DATA MODULES\n");
-        qr_print(stderr, qr, format);
+        qr_print(stderr, qr, outputFormat);
         fprintf(stderr, "\n");
     }
 
@@ -1046,6 +1058,12 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
                 bestMask = mask;
             }
 
+            if (isDebug) {
+                fprintf(stderr, ">>> PENALTY FOR MASK %d: %d\n", mask, penalty);
+                qr_print(stderr, qr, outputFormat);
+                fprintf(stderr, "\n");
+            }
+
             // re-applying reverts the mask
             apply_mask(qr, mask);
         }
@@ -1057,7 +1075,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> APPLYING DATA MASK %d\n", bestMask);
-        qr_print(stderr, qr, format);
+        qr_print(stderr, qr, outputFormat);
         fprintf(stderr, "\n");
     }
 
@@ -1067,7 +1085,7 @@ draw_matrix(QR *qr, uint8_t *codewords, int32_t codewordsCount, int32_t forcedMa
 
     if (isDebug) {
         fprintf(stderr, ">>> PLACING FORMAT & VERSION MODULES\n");
-        qr_print(stderr, qr, format);
+        qr_print(stderr, qr, outputFormat);
         fprintf(stderr, "\n");
     }
 }
@@ -1089,17 +1107,17 @@ qr_encode(QROptions *options)
     int32_t codewordsCount = prepare_codewords(&qr, &bv, codewords, isDebug);
 
     int32_t forcedMask = options->forcedMask;
-    OutputFormat format = options->format;
-    draw_matrix(&qr, codewords, codewordsCount, forcedMask, format, isDebug);
+    OutputFormat outputFormat = options->outputFormat;
+    draw_matrix(&qr, codewords, codewordsCount, forcedMask, outputFormat, isDebug);
 
     return qr;
 }
 
 static void
-print_color(FILE *out, ModuleColor color, OutputFormat format)
+print_color(FILE *out, ModuleColor color, OutputFormat outputFormat)
 {
-    switch (format) {
-        case OF_ANSI_COLOR: {
+    switch (outputFormat) {
+        case OF_ANSI: {
             fprintf(out, "%s", (color == MC_WHITE) ? "\033[47m  \033[0m" : "\033[40m  \033[0m");
         } break;
         case OF_ASCII: {
@@ -1112,16 +1130,16 @@ print_color(FILE *out, ModuleColor color, OutputFormat format)
 }
 
 void
-qr_print(FILE *out, QR *qr, OutputFormat format)
+qr_print(FILE *out, QR *qr, OutputFormat outputFormat)
 {
-    for (int32_t i = -4; i <= qr->size + 4; i++) {
-        for (int32_t j = -4; j <= qr->size + 4; j++) {
+    for (int32_t i = -4; i < qr->size + 4; i++) {
+        for (int32_t j = -4; j < qr->size + 4; j++) {
             if (i < 0 || i >= qr->size || j < 0 || j >= qr->size) {
                 // Drawing frame
-                print_color(out, MC_WHITE, format);
+                print_color(out, MC_WHITE, outputFormat);
                 continue;
             }
-            print_color(out, QR_MODULE_COLOR(qr, i, j), format);
+            print_color(out, QR_MODULE_COLOR(qr, i, j), outputFormat);
         }
         fprintf(out, "\n");
     }

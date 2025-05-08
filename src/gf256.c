@@ -74,10 +74,6 @@ gf256_polynom_divide(uint8_t *poly,
         index++;
     }
 
-    while (index < polynomLen && remainder[index] == 0) {
-        index++;
-    }
-
     int32_t remainderLength = polynomLen - index;
     for (int32_t i = index; i < polynomLen; i++) {
         remainder[i - index] = remainder[i];

@@ -21,19 +21,18 @@ $ make build
 
 ### Usage
 ```
-qr [OPTIONS]
-
-OPTIONS:
+Usage: qr [OPTION]...
+Where OPTION is one of the following:
     -t TEXT    Encode the given TEXT. Cannot be combined with -f.
     -f FILE    Encode the content of FILE. Cannot be combined with -t.
-    -l LEVEL   Force error correction level from 0 (Low) to 3 (High).
-    -v VERSION Force QR version from 1 to 40.
-    -m MASK    Force mask pattern from 0 to 7.
+    -l LEVEL   Force error correction level, where VERSION is a number from 0 (Low) to 3 (High).
+    -v VERSION Force QR version, where VERSION is a number from 1 to 40.
+    -m MASK    Force mask pattern, where MASK is a number from 0 to 7.
+    -o FORMAT  Output format, where FORMAT is one of: ANSI, ASCII.
     -d         Print debugging messages to STDERR.
 If neither -t nor -f is specified, encodes the data read from STDIN.
 ```
 
 ### TODO:
-- Support kenji 
-- Add tests
+- Support kenji
 - Use SIMD
