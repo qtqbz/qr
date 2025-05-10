@@ -18,10 +18,10 @@
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
 #define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
 
-global const ModuleValue DATA_WHITE = { .type = MT_DATA, .color = MC_WHITE };
-global const ModuleValue DATA_BLACK = { .type = MT_DATA, .color = MC_BLACK };
-global const ModuleValue FUNCTIONAL_WHITE = { .type = MT_FUNCTIONAL, .color = MC_WHITE };
-global const ModuleValue FUNCTIONAL_BLACK = { .type = MT_FUNCTIONAL, .color = MC_BLACK };
+global const ModuleValue DATA_LIGHT = { .type = MT_DATA, .color = MC_LIGHT };
+global const ModuleValue DATA_DARK = { .type = MT_DATA, .color = MC_DARK };
+global const ModuleValue FUNCTIONAL_LIGHT = { .type = MT_FUNCTIONAL, .color = MC_LIGHT };
+global const ModuleValue FUNCTIONAL_DARK = { .type = MT_FUNCTIONAL, .color = MC_DARK };
 
 // Maximum length of the encoded text.
 global const int32_t MAX_CHAR_COUNT[EM_COUNT][ECL_COUNT][VERSION_COUNT] = {
@@ -368,10 +368,10 @@ draw_square(QR *qr, int32_t row, int32_t column, int32_t size, ModuleValue value
 internal void
 draw_finder_pattern(QR *qr, int32_t row, int32_t column)
 {
-    draw_square(qr, row - 1, column - 1, 9, FUNCTIONAL_WHITE); // separator
-    draw_square(qr, row + 0, column + 0, 7, FUNCTIONAL_BLACK);
-    draw_square(qr, row + 1, column + 1, 5, FUNCTIONAL_WHITE);
-    draw_square(qr, row + 2, column + 2, 3, FUNCTIONAL_BLACK);
+    draw_square(qr, row - 1, column - 1, 9, FUNCTIONAL_LIGHT); // separator
+    draw_square(qr, row + 0, column + 0, 7, FUNCTIONAL_DARK);
+    draw_square(qr, row + 1, column + 1, 5, FUNCTIONAL_LIGHT);
+    draw_square(qr, row + 2, column + 2, 3, FUNCTIONAL_DARK);
 }
 
 internal void
@@ -385,9 +385,9 @@ draw_finder_patterns(QR *qr)
 internal void
 draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
 {
-    draw_square(qr, row + 0, column + 0, 5, FUNCTIONAL_BLACK);
-    draw_square(qr, row + 1, column + 1, 3, FUNCTIONAL_WHITE);
-    draw_module(qr, row + 2, column + 2, FUNCTIONAL_BLACK);
+    draw_square(qr, row + 0, column + 0, 5, FUNCTIONAL_DARK);
+    draw_square(qr, row + 1, column + 1, 3, FUNCTIONAL_LIGHT);
+    draw_module(qr, row + 2, column + 2, FUNCTIONAL_DARK);
 }
 
 internal void
@@ -418,11 +418,11 @@ draw_alignment_patterns(QR *qr)
 internal void
 draw_timing_patterns(QR *qr)
 {
-    ModuleValue value = FUNCTIONAL_BLACK;
+    ModuleValue value = FUNCTIONAL_DARK;
     for (int32_t i = 8; i < (qr->size - 7); i++) {
         draw_module(qr, 6, i, value);
         draw_module(qr, i, 6, value);
-        value.color = (value.color == MC_WHITE) ? MC_BLACK : MC_WHITE;
+        value.color ^= MC_DARK;
     }
 }
 
@@ -432,21 +432,21 @@ draw_functional_patterns(QR *qr)
     draw_finder_patterns(qr);
     draw_alignment_patterns(qr);
     draw_timing_patterns(qr);
-    draw_module(qr, 4 * qr->version + 13, 8, FUNCTIONAL_BLACK); // dark module
+    draw_module(qr, 4 * qr->version + 13, 8, FUNCTIONAL_DARK); // dark module
 }
 
 internal void
 reserve_format_modules(QR *qr)
 {
     // Vertical format modules
-    draw_rectangle(qr, 0, 8, 1, 6, FUNCTIONAL_BLACK);
-    draw_rectangle(qr, 7, 8, 1, 2, FUNCTIONAL_BLACK);
-    draw_rectangle(qr, qr->size - 7, 8, 1, 8, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 0, 8, 1, 6, FUNCTIONAL_DARK);
+    draw_rectangle(qr, 7, 8, 1, 2, FUNCTIONAL_DARK);
+    draw_rectangle(qr, qr->size - 7, 8, 1, 8, FUNCTIONAL_DARK);
 
     // Horizontal format modules
-    draw_rectangle(qr, 8, 0, 6, 1, FUNCTIONAL_BLACK);
-    draw_rectangle(qr, 8, 7, 2, 1, FUNCTIONAL_BLACK);
-    draw_rectangle(qr, 8, qr->size - 8, 8, 1, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 8, 0, 6, 1, FUNCTIONAL_DARK);
+    draw_rectangle(qr, 8, 7, 2, 1, FUNCTIONAL_DARK);
+    draw_rectangle(qr, 8, qr->size - 8, 8, 1, FUNCTIONAL_DARK);
 }
 
 internal void
@@ -456,10 +456,10 @@ reserve_version_modules(QR *qr)
         return;
     }
     // Vertical version modules
-    draw_rectangle(qr, qr->size - 11, 0, 6, 3, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, qr->size - 11, 0, 6, 3, FUNCTIONAL_DARK);
 
     // Horizontal version modules
-    draw_rectangle(qr, 0, qr->size - 11, 3, 6, FUNCTIONAL_BLACK);
+    draw_rectangle(qr, 0, qr->size - 11, 3, 6, FUNCTIONAL_DARK);
 }
 
 internal void
@@ -475,7 +475,7 @@ draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
         if (QR_MODULE_TYPE(qr, row, column) == MT_NONE) {
             if (codewordsIndex < codewordsCount) {
                 uint8_t codeword = codewords[codewordsIndex];
-                QR_MODULE_VALUE(qr, row, column) = ((codeword >> bitIndex) & 1) ? DATA_BLACK : DATA_WHITE;
+                QR_MODULE_VALUE(qr, row, column) = ((codeword >> bitIndex) & 1) ? DATA_DARK : DATA_LIGHT;
                 if (bitIndex == 0) {
                     codewordsIndex++;
                     bitIndex = 7;
@@ -485,7 +485,7 @@ draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
                 }
             }
             else {
-                QR_MODULE_VALUE(qr, row, column) = DATA_WHITE;
+                QR_MODULE_VALUE(qr, row, column) = DATA_LIGHT;
             }
         } else {
             if ((column == 6) || (column > 6 && column % 2 == 0) || (column < 6 && column % 2 == 1)) {
@@ -509,8 +509,7 @@ apply_mask(QR *qr, int32_t mask)
 {
     for (int32_t row = 0; row < qr->size; row++) {
         for (int32_t column = 0; column < qr->size; column++) {
-            ModuleValue value = QR_MODULE_VALUE(qr, row, column);
-            if (value.type != MT_DATA) {
+            if (QR_MODULE_TYPE(qr, row, column) != MT_DATA) {
                 continue;
             }
 
@@ -527,7 +526,7 @@ apply_mask(QR *qr, int32_t mask)
                 default: UNREACHABLE();
             }
             if (invert) {
-                QR_MODULE_COLOR(qr, row, column) = (value.color == MC_WHITE) ? MC_BLACK : MC_WHITE;
+                QR_MODULE_COLOR(qr, row, column) ^= MC_DARK;
             }
         }
     }
@@ -600,27 +599,27 @@ calc_rule3_penalty(QR *qr)
     int32_t penalty = 0;
     for (int32_t row = 0; row < qr->size; row++) {
         for (int32_t column = 0; column < qr->size - 6; column++) {
-            if ((QR_MODULE_COLOR(qr, row, column + 0) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row, column + 1) == MC_WHITE)
-                && (QR_MODULE_COLOR(qr, row, column + 2) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row, column + 3) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row, column + 4) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row, column + 5) == MC_WHITE)
-                && (QR_MODULE_COLOR(qr, row, column + 6) == MC_BLACK)) {
-                int32_t preWhiteModuleCount = 0;
-                int32_t postWhiteModuleCount = 0;
+            if ((QR_MODULE_COLOR(qr, row, column + 0) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row, column + 1) == MC_LIGHT)
+                && (QR_MODULE_COLOR(qr, row, column + 2) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row, column + 3) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row, column + 4) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row, column + 5) == MC_LIGHT)
+                && (QR_MODULE_COLOR(qr, row, column + 6) == MC_DARK)) {
+                int32_t preLightModuleCount = 0;
+                int32_t postLightModuleCount = 0;
                 for (int32_t i = 1; i <= 4; i++) {
-                    if (((column - i) >= 0) && (QR_MODULE_COLOR(qr, row, column - i) == MC_WHITE)) {
-                        preWhiteModuleCount++;
+                    if (((column - i) >= 0) && (QR_MODULE_COLOR(qr, row, column - i) == MC_LIGHT)) {
+                        preLightModuleCount++;
                     }
-                    if (((column + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row, column + 6 + i) == MC_WHITE)) {
-                        postWhiteModuleCount++;
+                    if (((column + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row, column + 6 + i) == MC_LIGHT)) {
+                        postLightModuleCount++;
                     }
                 }
-                if (preWhiteModuleCount == 4) {
+                if (preLightModuleCount == 4) {
                     penalty += 40;
                 }
-                if (postWhiteModuleCount == 4) {
+                if (postLightModuleCount == 4) {
                     penalty += 40;
                 }
             }
@@ -628,27 +627,27 @@ calc_rule3_penalty(QR *qr)
     }
     for (int32_t column = 0; column < qr->size; column++) {
         for (int32_t row = 0; row < qr->size - 6; row++) {
-            if ((QR_MODULE_COLOR(qr, row + 0, column) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row + 1, column) == MC_WHITE)
-                && (QR_MODULE_COLOR(qr, row + 2, column) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row + 3, column) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row + 4, column) == MC_BLACK)
-                && (QR_MODULE_COLOR(qr, row + 5, column) == MC_WHITE)
-                && (QR_MODULE_COLOR(qr, row + 6, column) == MC_BLACK)) {
-                int32_t preWhiteModuleCount = 0;
-                int32_t postWhiteModuleCount = 0;
+            if ((QR_MODULE_COLOR(qr, row + 0, column) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row + 1, column) == MC_LIGHT)
+                && (QR_MODULE_COLOR(qr, row + 2, column) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row + 3, column) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row + 4, column) == MC_DARK)
+                && (QR_MODULE_COLOR(qr, row + 5, column) == MC_LIGHT)
+                && (QR_MODULE_COLOR(qr, row + 6, column) == MC_DARK)) {
+                int32_t preLightModuleCount = 0;
+                int32_t postLightModuleCount = 0;
                 for (int32_t i = 1; i <= 4; i++) {
-                    if (((row - i) >= 0) && (QR_MODULE_COLOR(qr, row - i, column) == MC_WHITE)) {
-                        preWhiteModuleCount++;
+                    if (((row - i) >= 0) && (QR_MODULE_COLOR(qr, row - i, column) == MC_LIGHT)) {
+                        preLightModuleCount++;
                     }
-                    if (((row + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row + 6 + i, column) == MC_WHITE)) {
-                        postWhiteModuleCount++;
+                    if (((row + 6 + i) < qr->size) && (QR_MODULE_COLOR(qr, row + 6 + i, column) == MC_LIGHT)) {
+                        postLightModuleCount++;
                     }
                 }
-                if (preWhiteModuleCount == 4) {
+                if (preLightModuleCount == 4) {
                     penalty += 40;
                 }
-                if (postWhiteModuleCount == 4) {
+                if (postLightModuleCount == 4) {
                     penalty += 40;
                 }
             }
@@ -661,15 +660,15 @@ internal int32_t
 calc_rule4_penalty(QR *qr)
 {
     int32_t totalModuleCount = qr->size * qr->size;
-    int32_t blackModuleCount = 0;
+    int32_t darkModuleCount = 0;
     for (int32_t row = 0; row < qr->size; row++) {
         for (int32_t column = 0; column < qr->size; column++) {
-            if (QR_MODULE_COLOR(qr, row, column) == MC_BLACK) {
-                blackModuleCount++;
+            if (QR_MODULE_COLOR(qr, row, column) == MC_DARK) {
+                darkModuleCount++;
             }
         }
     }
-    int32_t fivePercentVariances = abs(blackModuleCount * 2 - totalModuleCount) * 10 / totalModuleCount;
+    int32_t fivePercentVariances = abs(darkModuleCount * 2 - totalModuleCount) * 10 / totalModuleCount;
     int32_t penalty = fivePercentVariances * 10;
     return penalty;
 }
@@ -696,7 +695,7 @@ draw_format_modules(QR *qr, int32_t mask)
         else if (row == 9) {
             row = qr->size - 7; // skip to the opposite side
         }
-        draw_module(qr, row, 8, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
+        draw_module(qr, row, 8, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_DARK : FUNCTIONAL_LIGHT);
         bitIndex++;
     }
 
@@ -709,7 +708,7 @@ draw_format_modules(QR *qr, int32_t mask)
             column = qr->size - 8; // skip to the opposite side
             bitIndex++;
         }
-        draw_module(qr, 8, column, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE);
+        draw_module(qr, 8, column, ((formatBits >> bitIndex) & 1) ? FUNCTIONAL_DARK : FUNCTIONAL_LIGHT);
         bitIndex--;
     }
 }
@@ -727,7 +726,7 @@ draw_version_modules(QR *qr)
 
     for (int32_t i = 0; i < 6; i++) {
         for (int32_t j = 0; j < 3; j++) {
-            ModuleValue value = ((versionBits >> bitIndex) & 1) ? FUNCTIONAL_BLACK : FUNCTIONAL_WHITE;
+            ModuleValue value = ((versionBits >> bitIndex) & 1) ? FUNCTIONAL_DARK : FUNCTIONAL_LIGHT;
             draw_module(qr, i, qr->size - 11 + j, value);
             draw_module(qr, qr->size - 11 + j, i, value);
             bitIndex++;
@@ -1104,7 +1103,7 @@ print_ansi(FILE *out, QR *qr)
                 fprintf(out, "\033[47m  \033[0m"); // printing frame
                 continue;
             }
-            if (QR_MODULE_COLOR(qr, row, column) == MC_WHITE) {
+            if (QR_MODULE_COLOR(qr, row, column) == MC_LIGHT) {
                 fprintf(out, "\033[47m  \033[0m");
             }
             else {
@@ -1124,7 +1123,7 @@ print_ascii(FILE *out, QR *qr)
                 fprintf(out, "  "); // printing frame
                 continue;
             }
-            if (QR_MODULE_COLOR(qr, row, column) == MC_WHITE) {
+            if (QR_MODULE_COLOR(qr, row, column) == MC_LIGHT) {
                 fprintf(out, "  ");
             }
             else {
@@ -1142,12 +1141,12 @@ print_utf8(FILE *out, QR *qr) {
             ModuleColor color0;
             ModuleColor color1;
             if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
-                color0 = MC_WHITE;
-                color1 = MC_WHITE;
+                color0 = MC_LIGHT;
+                color1 = MC_LIGHT;
             }
             else {
                 color0 = QR_MODULE_COLOR(qr, row, column);
-                color1 = (row == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row + 1, column);
+                color1 = (row == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
             }
             int32_t colors = color1 << 1 | color0;
             switch (colors) {
@@ -1171,16 +1170,16 @@ print_utf8q(FILE *out, QR *qr) {
             ModuleColor color2;
             ModuleColor color3;
             if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
-                color0 = MC_WHITE;
-                color1 = MC_WHITE;
-                color2 = MC_WHITE;
-                color3 = MC_WHITE;
+                color0 = MC_LIGHT;
+                color1 = MC_LIGHT;
+                color2 = MC_LIGHT;
+                color3 = MC_LIGHT;
             }
             else {
                 color0 = QR_MODULE_COLOR(qr, row, column);
-                color1 = (column == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row, column + 1);
-                color2 = (row == qr->size - 1) ? MC_WHITE : QR_MODULE_COLOR(qr, row + 1, column);
-                color3 = (row == qr->size - 1) || (column == qr->size - 1) ? MC_WHITE
+                color1 = (column == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row, column + 1);
+                color2 = (row == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
+                color3 = (row == qr->size - 1) || (column == qr->size - 1) ? MC_LIGHT
                                                                            : QR_MODULE_COLOR(qr, row + 1, column + 1);
             }
             int32_t colors = color3 << 3 | color2 << 2 | color1 << 1 | color0;

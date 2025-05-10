@@ -67,8 +67,8 @@ enum ModuleType
 typedef int32_t ModuleColor;
 enum ModuleColor
 {
-    MC_WHITE,
-    MC_BLACK,
+    MC_LIGHT = 0,
+    MC_DARK = 1,
 };
 
 typedef struct ModuleValue ModuleValue;
