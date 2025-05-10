@@ -2,6 +2,8 @@ SRCDIR := src
 OBJDIR := obj
 BINDIR := bin
 
+SHELL := /bin/bash
+
 SRC := $(SRCDIR)/bv.c $(SRCDIR)/gf256.c $(SRCDIR)/qr.c $(SRCDIR)/main.c
 OBJ := $(OBJDIR)/bv.o $(OBJDIR)/gf256.o $(OBJDIR)/qr.o $(OBJDIR)/main.o
 EXE := $(BINDIR)/qr
@@ -31,7 +33,7 @@ build: $(OBJ)
 	$(CC) -o $(EXE) $^ $(CFLAGS)
 
 test: build
-	./tests_run.sh
+	time ./tests_run.sh
 
 clean:
 	rm -f $(OBJDIR)/*.o $(EXE)

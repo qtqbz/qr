@@ -15,9 +15,7 @@ for TEST_INPUT in "${TEST_DIR}"/*.in; do
 
       ./bin/qr -o ASCII -l "${LEVEL}" -v "${VERSION}" -m "${MASK}" -f "${TEST_INPUT}" > "${TEST_OUTPUT}"
 
-      if cmp -s "${TEST_EXPECTED}" "${TEST_OUTPUT}"; then
-        rm -f "${TEST_OUTPUT}"
-      else
+      if ! cmp -s "${TEST_EXPECTED}" "${TEST_OUTPUT}"; then
         echo "❌ '${TEST_OUTPUT}' doesn't match '${TEST_EXPECTED}'"
       fi
     done
