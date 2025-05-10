@@ -17,6 +17,7 @@
 #define QR_MODULE_VALUE(qr, row, column) ((qr)->matrix[(row) * (qr)->size + (column)])
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
 #define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
+#define QR_IS_OUTSIDE(qr, row, column) (((row) < 0) || ((row) >= qr->size) || ((column) < 0) || ((column) >= qr->size))
 
 global const ModuleValue DATA_LIGHT = { .type = MT_DATA, .color = MC_LIGHT };
 global const ModuleValue DATA_DARK = { .type = MT_DATA, .color = MC_DARK };
@@ -1099,7 +1100,7 @@ print_ansi(FILE *out, QR *qr)
 {
     for (int32_t row = -4; row < qr->size + 4; row++) {
         for (int32_t column = -4; column < qr->size + 4; column++) {
-            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+            if (QR_IS_OUTSIDE(qr, row, column)) {
                 fprintf(out, "\033[47m  \033[0m"); // printing frame
                 continue;
             }
@@ -1119,7 +1120,7 @@ print_ascii(FILE *out, QR *qr)
 {
     for (int32_t row = -4; row < qr->size + 4; row++) {
         for (int32_t column = -4; column < qr->size + 4; column++) {
-            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+            if (QR_IS_OUTSIDE(qr, row, column)) {
                 fprintf(out, "  "); // printing frame
                 continue;
             }
@@ -1137,16 +1138,17 @@ print_ascii(FILE *out, QR *qr)
 internal void
 print_utf8(FILE *out, QR *qr) {
     for (int32_t row = -4; row < qr->size + 4; row += 2) {
+        bool isLastRow = row == qr->size - 1;
         for (int32_t column = -4; column < qr->size + 4; column++) {
             ModuleColor color0;
             ModuleColor color1;
-            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+            if (QR_IS_OUTSIDE(qr, row, column)) {
                 color0 = MC_LIGHT;
                 color1 = MC_LIGHT;
             }
             else {
                 color0 = QR_MODULE_COLOR(qr, row, column);
-                color1 = (row == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
+                color1 = isLastRow ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
             }
             int32_t colors = color1 << 1 | color0;
             switch (colors) {
@@ -1164,23 +1166,24 @@ print_utf8(FILE *out, QR *qr) {
 internal void
 print_utf8q(FILE *out, QR *qr) {
     for (int32_t row = -4; row < qr->size + 4; row += 2) {
+        bool isLastRow = row == qr->size - 1;
         for (int32_t column = -4; column < qr->size + 4; column += 2) {
             ModuleColor color0;
             ModuleColor color1;
             ModuleColor color2;
             ModuleColor color3;
-            if (row < 0 || row >= qr->size || column < 0 || column >= qr->size) {
+            if (QR_IS_OUTSIDE(qr, row, column)) {
                 color0 = MC_LIGHT;
                 color1 = MC_LIGHT;
                 color2 = MC_LIGHT;
                 color3 = MC_LIGHT;
             }
             else {
+                bool isLastColumn = column == qr->size - 1;
                 color0 = QR_MODULE_COLOR(qr, row, column);
-                color1 = (column == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row, column + 1);
-                color2 = (row == qr->size - 1) ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
-                color3 = (row == qr->size - 1) || (column == qr->size - 1) ? MC_LIGHT
-                                                                           : QR_MODULE_COLOR(qr, row + 1, column + 1);
+                color1 = isLastColumn ? MC_LIGHT : QR_MODULE_COLOR(qr, row, column + 1);
+                color2 = isLastRow ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column);
+                color3 = (isLastRow || isLastColumn) ? MC_LIGHT : QR_MODULE_COLOR(qr, row + 1, column + 1);
             }
             int32_t colors = color3 << 3 | color2 << 2 | color1 << 1 | color0;
             switch (colors) {
