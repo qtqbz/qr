@@ -9,7 +9,7 @@
 #include "utils.h"
 #include "qr.h"
 
-static void
+__attribute__((noreturn)) static void
 print_usage_and_fail(char *exe)
 {
     fprintf(stderr, "Usage: %s [OPTION]...\n", exe);
@@ -42,7 +42,6 @@ parse_output_format(char *exe, char *outputFormatString)
     }
     fprintf(stderr, "Invalid output format: %s\n", outputFormatString);
     print_usage_and_fail(exe);
-    return 0; // unreachable
 }
 
 static QROptions

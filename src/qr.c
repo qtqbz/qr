@@ -516,33 +516,15 @@ apply_mask(QR *qr, int32_t mask)
 
             bool invert = false;
             switch (mask) {
-                case 0: {
-                    invert = ((row + column) % 2) == 0;
-                } break;
-                case 1: {
-                    invert = (row % 2) == 0;
-                } break;
-                case 2: {
-                    invert = (column % 3) == 0;
-                } break;
-                case 3: {
-                    invert = ((row + column) % 3) == 0;
-                } break;
-                case 4: {
-                    invert = (((row / 2) + (column / 3)) % 2) == 0;
-                } break;
-                case 5: {
-                    invert = ((row * column) % 2) + ((row * column) % 3) == 0;
-                } break;
-                case 6: {
-                    invert = ((((row * column) % 2) + ((row * column) % 3)) % 2) == 0;
-                } break;
-                case 7: {
-                    invert = ((((row + column) % 2) + ((row * column) % 3)) % 2) == 0;
-                } break;
-                default: {
-                    ASSERT(false); // unreachable
-                }
+                case 0: invert = ((row + column) % 2) == 0; break;
+                case 1: invert = (row % 2) == 0; break;
+                case 2: invert = (column % 3) == 0; break;
+                case 3: invert = ((row + column) % 3) == 0; break;
+                case 4: invert = (((row / 2) + (column / 3)) % 2) == 0; break;
+                case 5: invert = ((row * column) % 2) + ((row * column) % 3) == 0; break;
+                case 6: invert = ((((row * column) % 2) + ((row * column) % 3)) % 2) == 0; break;
+                case 7: invert = ((((row + column) % 2) + ((row * column) % 3)) % 2) == 0; break;
+                default: UNREACHABLE();
             }
             if (invert) {
                 QR_MODULE_COLOR(qr, row, column) = (value.color == MC_WHITE) ? MC_BLACK : MC_WHITE;
@@ -1173,7 +1155,7 @@ print_utf8(FILE *out, QR *qr) {
                 case 0b01: fprintf(out, "%s", "▄"); break;
                 case 0b10: fprintf(out, "%s", "▀"); break;
                 case 0b11: fprintf(out, "%s", " "); break;
-                default: ASSERT(false); // unreachable
+                default: UNREACHABLE();
             }
         }
         fprintf(out, "\n");
@@ -1219,7 +1201,7 @@ print_utf8q(FILE *out, QR *qr) {
                 case 0b1101: fprintf(out, "%s", "▝"); break;
                 case 0b1110: fprintf(out, "%s", "▘"); break;
                 case 0b1111: fprintf(out, "%s", " "); break;
-                default: ASSERT(false); // unreachable
+                default: UNREACHABLE();
             }
         }
         fprintf(out, "\n");
@@ -1234,6 +1216,6 @@ qr_print(FILE *out, QR *qr, OutputFormat outputFormat)
         case OF_ASCII: print_ascii(out, qr); break;
         case OF_UTF8: print_utf8(out, qr); break;
         case OF_UTF8Q: print_utf8q(out, qr); break;
-        default: ASSERT(false); // unreachable
+        default: UNREACHABLE();
     }
 }
