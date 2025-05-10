@@ -31,7 +31,7 @@ enum EncodingMode
     EM_COUNT,
 };
 
-static const char *const EncodingModeNames[EM_COUNT] = {
+global const char *const EncodingModeNames[EM_COUNT] = {
     "NUMERIC",
     "ALPHANUMERIC",
     "BYTE",
@@ -49,7 +49,7 @@ enum ErrorCorrectionLevel
     ECL_COUNT,
 };
 
-static const char *const ErrorCorrectionLevelNames[ECL_COUNT] = {
+global const char *const ErrorCorrectionLevelNames[ECL_COUNT] = {
     "LOW",
     "MEDIUM",
     "QUARTILE",

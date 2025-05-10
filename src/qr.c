@@ -18,13 +18,13 @@
 #define QR_MODULE_COLOR(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).color)
 #define QR_MODULE_TYPE(qr, row, column) ((QR_MODULE_VALUE((qr), (row), (column))).type)
 
-static const ModuleValue DATA_WHITE = { .type = MT_DATA, .color = MC_WHITE };
-static const ModuleValue DATA_BLACK = { .type = MT_DATA, .color = MC_BLACK };
-static const ModuleValue FUNCTIONAL_WHITE = { .type = MT_FUNCTIONAL, .color = MC_WHITE };
-static const ModuleValue FUNCTIONAL_BLACK = { .type = MT_FUNCTIONAL, .color = MC_BLACK };
+global const ModuleValue DATA_WHITE = { .type = MT_DATA, .color = MC_WHITE };
+global const ModuleValue DATA_BLACK = { .type = MT_DATA, .color = MC_BLACK };
+global const ModuleValue FUNCTIONAL_WHITE = { .type = MT_FUNCTIONAL, .color = MC_WHITE };
+global const ModuleValue FUNCTIONAL_BLACK = { .type = MT_FUNCTIONAL, .color = MC_BLACK };
 
 // Maximum length of the encoded text.
-static const int32_t MAX_CHAR_COUNT[EM_COUNT][ECL_COUNT][VERSION_COUNT] = {
+global const int32_t MAX_CHAR_COUNT[EM_COUNT][ECL_COUNT][VERSION_COUNT] = {
     // EM_NUMERIC
     {
         {  41,   77,  127,  187,  255,  322,  370,  461,  552,  652,
@@ -85,7 +85,7 @@ static const int32_t MAX_CHAR_COUNT[EM_COUNT][ECL_COUNT][VERSION_COUNT] = {
 };
 
 // Number of bits allocated for the length of the encoded text.
-static const int32_t LENGTH_BITS_COUNT[EM_COUNT][VERSION_COUNT] = {
+global const int32_t LENGTH_BITS_COUNT[EM_COUNT][VERSION_COUNT] = {
     // EM_NUMERIC
     { 10, 10, 10, 10, 10, 10, 10, 10, 10, 12,
       12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
@@ -104,7 +104,7 @@ static const int32_t LENGTH_BITS_COUNT[EM_COUNT][VERSION_COUNT] = {
 };
 
 // Number of data modules and error correction modules.
-static const int32_t CONTENT_MODULES_COUNT[VERSION_COUNT] = {
+global const int32_t CONTENT_MODULES_COUNT[VERSION_COUNT] = {
       208,   359,   567,   807,  1079,  1383,  1568,  1936,  2336,  2768,
      3232,  3728,  4256,  4651,  5243,  5867,  6523,  7211,  7931,  8683,
      9252, 10068, 10916, 11796, 12708, 13652, 14628, 15371, 16411, 17483,
@@ -112,7 +112,7 @@ static const int32_t CONTENT_MODULES_COUNT[VERSION_COUNT] = {
 };
 
 // Number of ECC blocks.
-static const int32_t ERROR_CORRECTION_BLOCKS_COUNT[ECL_COUNT][VERSION_COUNT] = {
+global const int32_t ERROR_CORRECTION_BLOCKS_COUNT[ECL_COUNT][VERSION_COUNT] = {
     // ECL_LOW
     {  1,  1,  1,  1,  1,  2,  2,  2,  2,  4,
        4,  4,  4,  4,  6,  6,  6,  6,  7,  8,
@@ -136,7 +136,7 @@ static const int32_t ERROR_CORRECTION_BLOCKS_COUNT[ECL_COUNT][VERSION_COUNT] = {
 };
 
 // Number of codewords inside the ECC block.
-static const int32_t ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[ECL_COUNT][VERSION_COUNT] = {
+global const int32_t ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[ECL_COUNT][VERSION_COUNT] = {
     // ECL_LOW
     {  7, 10, 15, 20, 26, 18, 20, 24, 30, 18,
       20, 24, 26, 30, 22, 24, 28, 30, 28, 28,
@@ -159,7 +159,7 @@ static const int32_t ERROR_CORRECTION_CODEWORDS_PER_BLOCK_COUNT[ECL_COUNT][VERSI
       30, 30, 30, 30, 30, 30, 30, 30, 30, 30, },
 };
 
-static const int32_t ALIGNMENT_COORDINATES[VERSION_COUNT][ALIGNMENT_COORDINATES_COUNT] = {
+global const int32_t ALIGNMENT_COORDINATES[VERSION_COUNT][ALIGNMENT_COORDINATES_COUNT] = {
     { 0,  0,  0,  0,   0,   0,   0 },
     { 6, 18,  0,  0,   0,   0,   0 },
     { 6, 22,  0,  0,   0,   0,   0 },
@@ -202,7 +202,7 @@ static const int32_t ALIGNMENT_COORDINATES[VERSION_COUNT][ALIGNMENT_COORDINATES_
     { 6, 30, 58, 86, 114, 142, 170 },
 };
 
-static const uint32_t FORMAT_BITS[ECL_COUNT][MASK_COUNT] = {
+global const uint32_t FORMAT_BITS[ECL_COUNT][MASK_COUNT] = {
     // ECL_LOW
     { 0b111011111000100, 0b111001011110011, 0b111110110101010, 0b111100010011101,
       0b110011000101111, 0b110001100011000, 0b110110001000001, 0b110100101110110, },
@@ -217,7 +217,7 @@ static const uint32_t FORMAT_BITS[ECL_COUNT][MASK_COUNT] = {
       0b000011101100010, 0b000001001010101, 0b000110100001100, 0b000100000111011, },
 };
 
-static const uint32_t VERSION_BITS[VERSION_COUNT]= {
+global const uint32_t VERSION_BITS[VERSION_COUNT]= {
     0,
     0,
     0,
@@ -260,7 +260,7 @@ static const uint32_t VERSION_BITS[VERSION_COUNT]= {
     0b101000110001101001,
 };
 
-static const uint8_t GENERATOR_POLYNOM[MAX_GENERATOR_POLYNOM_DEGREE + 1][MAX_GENERATOR_POLYNOM_DEGREE + 1] = {
+global const uint8_t GENERATOR_POLYNOM[MAX_GENERATOR_POLYNOM_DEGREE + 1][MAX_GENERATOR_POLYNOM_DEGREE + 1] = {
     {  1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
     {  1,   1,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
     {  1,   3,   2,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, },
@@ -294,7 +294,7 @@ static const uint8_t GENERATOR_POLYNOM[MAX_GENERATOR_POLYNOM_DEGREE + 1][MAX_GEN
     {  1, 212, 246,  77,  73, 195, 192,  75,  98,   5,  70, 103, 177,  22, 217, 138,  51, 181, 246,  72,  25,  18,  46, 228,  74, 216, 195,  11, 106, 130, 150, },
 };
 
-static int32_t
+internal int32_t
 calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
 {
     int32_t contentCodewordsCount = CONTENT_MODULES_COUNT[version] / 8;
@@ -304,7 +304,7 @@ calc_data_codewords_count(int32_t version, ErrorCorrectionLevel level)
     return dataCodewordsCount;
 }
 
-static int32_t
+internal int32_t
 find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int32_t offset)
 {
     for (int32_t i = offset; i < textLen; i++) {
@@ -316,7 +316,7 @@ find_first_unmatch_index(char *text, int32_t textLen, char *charsToMatch, int32_
     return -1;
 }
 
-static EncodingMode
+internal EncodingMode
 get_encoding_mode(char *text, int32_t textLen)
 {
     int32_t i = find_first_unmatch_index(text, textLen, "0123456789", 0);
@@ -330,7 +330,7 @@ get_encoding_mode(char *text, int32_t textLen)
     return EM_BYTE;
 }
 
-static int32_t
+internal int32_t
 get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount)
 {
     for (int32_t version = MIN_VERSION; version <= MAX_VERSION; version++) {
@@ -341,7 +341,7 @@ get_version(EncodingMode mode, ErrorCorrectionLevel level, int32_t textCharCount
     return VERSION_INVALID;
 }
 
-static void
+internal void
 draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
 {
     if ((0 <= row && row < qr->size) && (0 <= column && column < qr->size)) {
@@ -349,7 +349,7 @@ draw_module(QR *qr, int32_t row, int32_t column, ModuleValue value)
     }
 }
 
-static void
+internal void
 draw_rectangle(QR *qr, int32_t row, int32_t column, int32_t width, int32_t height, ModuleValue value)
 {
     for (int32_t i = 0; i < height; i++) {
@@ -359,13 +359,13 @@ draw_rectangle(QR *qr, int32_t row, int32_t column, int32_t width, int32_t heigh
     }
 }
 
-static void
+internal void
 draw_square(QR *qr, int32_t row, int32_t column, int32_t size, ModuleValue value)
 {
     draw_rectangle(qr, row, column, size, size, value);
 }
 
-static void
+internal void
 draw_finder_pattern(QR *qr, int32_t row, int32_t column)
 {
     draw_square(qr, row - 1, column - 1, 9, FUNCTIONAL_WHITE); // separator
@@ -374,7 +374,7 @@ draw_finder_pattern(QR *qr, int32_t row, int32_t column)
     draw_square(qr, row + 2, column + 2, 3, FUNCTIONAL_BLACK);
 }
 
-static void
+internal void
 draw_finder_patterns(QR *qr)
 {
     draw_finder_pattern(qr, 0, 0);
@@ -382,7 +382,7 @@ draw_finder_patterns(QR *qr)
     draw_finder_pattern(qr, qr->size - 7, 0);
 }
 
-static void
+internal void
 draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
 {
     draw_square(qr, row + 0, column + 0, 5, FUNCTIONAL_BLACK);
@@ -390,7 +390,7 @@ draw_alignment_pattern(QR *qr, int32_t row, int32_t column)
     draw_module(qr, row + 2, column + 2, FUNCTIONAL_BLACK);
 }
 
-static void
+internal void
 draw_alignment_patterns(QR *qr)
 {
     for (int32_t i = 0; i < ALIGNMENT_COORDINATES_COUNT; i++) {
@@ -415,7 +415,7 @@ draw_alignment_patterns(QR *qr)
     }
 }
 
-static void
+internal void
 draw_timing_patterns(QR *qr)
 {
     ModuleValue value = FUNCTIONAL_BLACK;
@@ -426,7 +426,7 @@ draw_timing_patterns(QR *qr)
     }
 }
 
-static void
+internal void
 draw_functional_patterns(QR *qr)
 {
     draw_finder_patterns(qr);
@@ -435,7 +435,7 @@ draw_functional_patterns(QR *qr)
     draw_module(qr, 4 * qr->version + 13, 8, FUNCTIONAL_BLACK); // dark module
 }
 
-static void
+internal void
 reserve_format_modules(QR *qr)
 {
     // Vertical format modules
@@ -449,7 +449,7 @@ reserve_format_modules(QR *qr)
     draw_rectangle(qr, 8, qr->size - 8, 8, 1, FUNCTIONAL_BLACK);
 }
 
-static void
+internal void
 reserve_version_modules(QR *qr)
 {
     if (qr->version < 6) {
@@ -462,7 +462,7 @@ reserve_version_modules(QR *qr)
     draw_rectangle(qr, 0, qr->size - 11, 3, 6, FUNCTIONAL_BLACK);
 }
 
-static void
+internal void
 draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
 {
     int32_t column = qr->size - 1;
@@ -504,7 +504,7 @@ draw_data(QR *qr, uint8_t *codewords, int32_t codewordsCount)
     }
 }
 
-static void
+internal void
 apply_mask(QR *qr, int32_t mask)
 {
     for (int32_t row = 0; row < qr->size; row++) {
@@ -533,7 +533,7 @@ apply_mask(QR *qr, int32_t mask)
     }
 }
 
-static int32_t
+internal int32_t
 calc_rule1_penalty(QR *qr)
 {
     int32_t penalty = 0;
@@ -576,7 +576,7 @@ calc_rule1_penalty(QR *qr)
     return penalty;
 }
 
-static int32_t
+internal int32_t
 calc_rule2_penalty(QR *qr)
 {
     int32_t penalty = 0;
@@ -594,7 +594,7 @@ calc_rule2_penalty(QR *qr)
     return penalty;
 }
 
-static int32_t
+internal int32_t
 calc_rule3_penalty(QR *qr)
 {
     int32_t penalty = 0;
@@ -657,7 +657,7 @@ calc_rule3_penalty(QR *qr)
     return penalty;
 }
 
-static int32_t
+internal int32_t
 calc_rule4_penalty(QR *qr)
 {
     int32_t totalModuleCount = qr->size * qr->size;
@@ -674,7 +674,7 @@ calc_rule4_penalty(QR *qr)
     return penalty;
 }
 
-static int32_t
+internal int32_t
 calc_mask_penalty(QR *qr)
 {
     int32_t penalty1 = calc_rule1_penalty(qr);
@@ -684,7 +684,7 @@ calc_mask_penalty(QR *qr)
     return penalty1 + penalty2 + penalty3 + penalty4;
 }
 
-static void
+internal void
 draw_format_modules(QR *qr, int32_t mask)
 {
     uint32_t formatBits = FORMAT_BITS[qr->level][mask];
@@ -714,7 +714,7 @@ draw_format_modules(QR *qr, int32_t mask)
     }
 }
 
-static void
+internal void
 draw_version_modules(QR *qr)
 {
     ASSERT(MIN_VERSION <= qr->version && qr->version <= MAX_VERSION);
@@ -735,7 +735,7 @@ draw_version_modules(QR *qr)
     }
 }
 
-static QR
+internal QR
 analyse_data(char *text, int32_t textLen, ErrorCorrectionLevel forcedLevel, int32_t forcedVersion, bool isDebug)
 {
     QR qr = {};
@@ -806,7 +806,7 @@ analyse_data(char *text, int32_t textLen, ErrorCorrectionLevel forcedLevel, int3
     return qr;
 }
 
-static BitVec
+internal BitVec
 encode_data(QR* qr, char *text, int32_t textLen, bool isDebug)
 {
     // 2. Data Encoding
@@ -896,7 +896,7 @@ encode_data(QR* qr, char *text, int32_t textLen, bool isDebug)
     return bv;
 }
 
-static int32_t
+internal int32_t
 prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
 {
     // 3. Error correction coding
@@ -987,7 +987,7 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
     return codewordsCount;
 }
 
-static void
+internal void
 draw_matrix(QR *qr,
             uint8_t *codewords,
             int32_t codewordsCount,
@@ -1095,7 +1095,7 @@ qr_encode(QROptions *options)
     return qr;
 }
 
-static void
+internal void
 print_ansi(FILE *out, QR *qr)
 {
     for (int32_t row = -4; row < qr->size + 4; row++) {
@@ -1115,7 +1115,7 @@ print_ansi(FILE *out, QR *qr)
     }
 }
 
-static void
+internal void
 print_ascii(FILE *out, QR *qr)
 {
     for (int32_t row = -4; row < qr->size + 4; row++) {
@@ -1135,7 +1135,7 @@ print_ascii(FILE *out, QR *qr)
     }
 }
 
-static void
+internal void
 print_utf8(FILE *out, QR *qr) {
     for (int32_t row = -4; row < qr->size + 4; row += 2) {
         for (int32_t column = -4; column < qr->size + 4; column++) {
@@ -1162,7 +1162,7 @@ print_utf8(FILE *out, QR *qr) {
     }
 }
 
-static void
+internal void
 print_utf8q(FILE *out, QR *qr) {
     for (int32_t row = -4; row < qr->size + 4; row += 2) {
         for (int32_t column = -4; column < qr->size + 4; column += 2) {

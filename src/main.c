@@ -9,7 +9,7 @@
 #include "utils.h"
 #include "qr.h"
 
-__attribute__((noreturn)) static void
+__attribute__((noreturn)) internal void
 print_usage_and_fail(char *exe)
 {
     fprintf(stderr, "Usage: %s [OPTION]...\n", exe);
@@ -25,7 +25,7 @@ print_usage_and_fail(char *exe)
     exit(1);
 }
 
-static OutputFormat
+internal OutputFormat
 parse_output_format(char *exe, char *outputFormatString)
 {
     if (strcmp(outputFormatString, "ANSI") == 0) {
@@ -44,7 +44,7 @@ parse_output_format(char *exe, char *outputFormatString)
     print_usage_and_fail(exe);
 }
 
-static QROptions
+internal QROptions
 parse_options(int32_t argc, char **argv)
 {
     QROptions options = {};

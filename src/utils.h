@@ -14,6 +14,9 @@
 #define UNREACHABLE() (void)(x)
 #endif
 
+#define global static
+#define internal static
+
 #define ARRAY_CAP(a) ((int32_t)(sizeof(a) / sizeof((a)[0])))
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
