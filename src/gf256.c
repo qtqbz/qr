@@ -64,9 +64,11 @@ gf256_polynom_divide(uint8_t *poly,
     }
 
     int32_t index = 0;
+    uint8_t divisor0 = divisor[0];
     for (int32_t i = divisorLen - 1; i < polynomLen; i++) {
-        if (remainder[index]) {
-            uint8_t factor = gf256_divide(remainder[index], divisor[0]);
+        uint8_t dividend = remainder[index];
+        if (dividend) {
+            uint8_t factor = gf256_divide(dividend, divisor0);
             for (int32_t j = 0; j < divisorLen; j++) {
                 remainder[index + j] ^= gf256_multiply(factor, divisor[j]);
             }

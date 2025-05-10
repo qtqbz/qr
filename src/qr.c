@@ -917,6 +917,7 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
     uint8_t *divisor = (uint8_t *)GENERATOR_POLYNOM[errorCodewordsPerBlockCount];
 
     int32_t dataCodewordsIndex = 0;
+    uint8_t errorCodewords[MAX_POLYNOM_DEGREE + MAX_GENERATOR_POLYNOM_DEGREE + 1] = {};
     for (int32_t i = 0; i < blocksCount; i++) {
         uint8_t *block = blocks[i];
         int32_t blockIndex = 0;
@@ -934,7 +935,6 @@ prepare_codewords(QR *qr, BitVec *bv, uint8_t *codewords, bool isDebug)
         }
 
         // Calculate error correcting codewords
-        uint8_t errorCodewords[MAX_POLYNOM_DEGREE + MAX_GENERATOR_POLYNOM_DEGREE + 1] = {};
         int32_t remainderLength = gf256_polynom_divide(block,
                                                        currBlockLength,
                                                        divisor,
