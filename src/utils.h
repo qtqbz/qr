@@ -8,7 +8,11 @@
             __builtin_trap();   \
         }                       \
     } while (0)
-#define UNREACHABLE() __builtin_trap()
+#define UNREACHABLE()            \
+    do {                         \
+        __builtin_trap();        \
+        __builtin_unreachable(); \
+    } while (0)
 #else
 #define ASSERT(x) (void)(x)
 #define UNREACHABLE() (void)(x)
