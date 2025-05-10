@@ -11,6 +11,8 @@
 
 #define ALIGNMENT_COORDINATES_COUNT 7
 
+#define QR_FRAME_WIDTH 4
+
 #define MAX_POLYNOM_DEGREE 123 // = max data codewords per block
 #define MAX_GENERATOR_POLYNOM_DEGREE 30 // = max error correction codewords per block
 
@@ -1098,8 +1100,8 @@ qr_encode(QROptions *options)
 internal void
 print_ansi(FILE *out, QR *qr)
 {
-    for (int32_t row = -4; row < qr->size + 4; row++) {
-        for (int32_t column = -4; column < qr->size + 4; column++) {
+    for (int32_t row = -QR_FRAME_WIDTH; row < qr->size + QR_FRAME_WIDTH; row++) {
+        for (int32_t column = -QR_FRAME_WIDTH; column < qr->size + QR_FRAME_WIDTH; column++) {
             if (QR_IS_OUTSIDE(qr, row, column)) {
                 fprintf(out, "\033[47m  \033[0m"); // printing frame
                 continue;
@@ -1118,8 +1120,8 @@ print_ansi(FILE *out, QR *qr)
 internal void
 print_ascii(FILE *out, QR *qr)
 {
-    for (int32_t row = -4; row < qr->size + 4; row++) {
-        for (int32_t column = -4; column < qr->size + 4; column++) {
+    for (int32_t row = -QR_FRAME_WIDTH; row < qr->size + QR_FRAME_WIDTH; row++) {
+        for (int32_t column = -QR_FRAME_WIDTH; column < qr->size + QR_FRAME_WIDTH; column++) {
             if (QR_IS_OUTSIDE(qr, row, column)) {
                 fprintf(out, "  "); // printing frame
                 continue;
@@ -1137,9 +1139,9 @@ print_ascii(FILE *out, QR *qr)
 
 internal void
 print_utf8(FILE *out, QR *qr) {
-    for (int32_t row = -4; row < qr->size + 4; row += 2) {
+    for (int32_t row = -QR_FRAME_WIDTH; row < qr->size + QR_FRAME_WIDTH; row += 2) {
         bool isLastRow = row == qr->size - 1;
-        for (int32_t column = -4; column < qr->size + 4; column++) {
+        for (int32_t column = -QR_FRAME_WIDTH; column < qr->size + QR_FRAME_WIDTH; column++) {
             ModuleColor color0;
             ModuleColor color1;
             if (QR_IS_OUTSIDE(qr, row, column)) {
@@ -1152,10 +1154,10 @@ print_utf8(FILE *out, QR *qr) {
             }
             int32_t colors = color1 << 1 | color0;
             switch (colors) {
-                case 0b00: fprintf(out, "%s", "█"); break;
-                case 0b01: fprintf(out, "%s", "▄"); break;
-                case 0b10: fprintf(out, "%s", "▀"); break;
-                case 0b11: fprintf(out, "%s", " "); break;
+                case 0b00: fprintf(out, "█"); break;
+                case 0b01: fprintf(out, "▄"); break;
+                case 0b10: fprintf(out, "▀"); break;
+                case 0b11: fprintf(out, " "); break;
                 default: UNREACHABLE();
             }
         }
@@ -1165,9 +1167,9 @@ print_utf8(FILE *out, QR *qr) {
 
 internal void
 print_utf8q(FILE *out, QR *qr) {
-    for (int32_t row = -4; row < qr->size + 4; row += 2) {
+    for (int32_t row = -QR_FRAME_WIDTH; row < qr->size + QR_FRAME_WIDTH; row += 2) {
         bool isLastRow = row == qr->size - 1;
-        for (int32_t column = -4; column < qr->size + 4; column += 2) {
+        for (int32_t column = -QR_FRAME_WIDTH; column < qr->size + QR_FRAME_WIDTH; column += 2) {
             ModuleColor color0;
             ModuleColor color1;
             ModuleColor color2;
@@ -1187,22 +1189,22 @@ print_utf8q(FILE *out, QR *qr) {
             }
             int32_t colors = color3 << 3 | color2 << 2 | color1 << 1 | color0;
             switch (colors) {
-                case 0b0000: fprintf(out, "%s", "█"); break;
-                case 0b0001: fprintf(out, "%s", "▟"); break;
-                case 0b0010: fprintf(out, "%s", "▙"); break;
-                case 0b0011: fprintf(out, "%s", "▄"); break;
-                case 0b0100: fprintf(out, "%s", "▜"); break;
-                case 0b0101: fprintf(out, "%s", "▐"); break;
-                case 0b0110: fprintf(out, "%s", "▚"); break;
-                case 0b0111: fprintf(out, "%s", "▗"); break;
-                case 0b1000: fprintf(out, "%s", "▛"); break;
-                case 0b1001: fprintf(out, "%s", "▞"); break;
-                case 0b1010: fprintf(out, "%s", "▌"); break;
-                case 0b1011: fprintf(out, "%s", "▖"); break;
-                case 0b1100: fprintf(out, "%s", "▀"); break;
-                case 0b1101: fprintf(out, "%s", "▝"); break;
-                case 0b1110: fprintf(out, "%s", "▘"); break;
-                case 0b1111: fprintf(out, "%s", " "); break;
+                case 0b0000: fprintf(out, "█"); break;
+                case 0b0001: fprintf(out, "▟"); break;
+                case 0b0010: fprintf(out, "▙"); break;
+                case 0b0011: fprintf(out, "▄"); break;
+                case 0b0100: fprintf(out, "▜"); break;
+                case 0b0101: fprintf(out, "▐"); break;
+                case 0b0110: fprintf(out, "▚"); break;
+                case 0b0111: fprintf(out, "▗"); break;
+                case 0b1000: fprintf(out, "▛"); break;
+                case 0b1001: fprintf(out, "▞"); break;
+                case 0b1010: fprintf(out, "▌"); break;
+                case 0b1011: fprintf(out, "▖"); break;
+                case 0b1100: fprintf(out, "▀"); break;
+                case 0b1101: fprintf(out, "▝"); break;
+                case 0b1110: fprintf(out, "▘"); break;
+                case 0b1111: fprintf(out, " "); break;
                 default: UNREACHABLE();
             }
         }
