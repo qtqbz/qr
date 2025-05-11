@@ -1,21 +1,19 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <stdint.h>
+
 #if BUILD_DEBUG
-#define ASSERT(x)               \
-    do {                        \
-        if (!(x)) {             \
-            __builtin_trap();   \
-        }                       \
+#define ASSERT(x)             \
+    do {                      \
+        if (!(x)) {           \
+            __builtin_trap(); \
+        }                     \
     } while (0)
-#define UNREACHABLE()            \
-    do {                         \
-        __builtin_trap();        \
-        __builtin_unreachable(); \
-    } while (0)
+#define UNREACHABLE() ASSERT(false)
 #else
 #define ASSERT(x) (void)(x)
-#define UNREACHABLE() (void)(x)
+#define UNREACHABLE() __builtin_unreachable()
 #endif
 
 #define global static
