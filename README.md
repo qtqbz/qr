@@ -2,7 +2,7 @@
 
 This is a simple terminal utility for generating QR codes.
 
-![image](./qr_demo.png)
+![image](./qr_demo.gif)
 
 ### Notes
 - Written in C
