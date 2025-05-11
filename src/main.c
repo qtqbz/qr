@@ -56,7 +56,7 @@ parse_options(int32_t argc, char **argv)
 
     char *exe = argv[0];
     char *text = NULL;
-    char *filename = NULL;
+    char *filepath = NULL;
 
     for (int32_t i = 1; i < argc; i++) {
         char *option = argv[i];
@@ -66,7 +66,7 @@ parse_options(int32_t argc, char **argv)
         }
         switch (option[1]) {
             case 't': {
-                if (filename != NULL) {
+                if (filepath != NULL) {
                     fprintf(stderr, "-t cannot be combined with -f\n");
                     print_usage_and_fail(exe);
                 }
@@ -85,7 +85,7 @@ parse_options(int32_t argc, char **argv)
                     fprintf(stderr, "Missing FILE\n");
                     print_usage_and_fail(exe);
                 }
-                filename = argv[i];
+                filepath = argv[i];
             } break;
             case 'l': {
                 if (++i >= argc) {
@@ -149,15 +149,19 @@ parse_options(int32_t argc, char **argv)
         strncpy(options.text, text, textLen);
         options.textLen = (int32_t)textLen;
     }
-    else if (filename != NULL) {
-        FILE *file = fopen(filename, "r");
+    else if (filepath != NULL) {
+        FILE *file = fopen(filepath, "r");
         if (file == NULL) {
-            fprintf(stderr, "Failed to open file '%s': %s\n", filename, strerror(errno));
+            fprintf(stderr, "Failed to open file '%s': %s\n", filepath, strerror(errno));
             exit(1);
         }
-        size_t fileSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN, file);
+        size_t fileSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN + 1, file);
         if (ferror(file) != 0) {
-            fprintf(stderr, "Failed to read from file '%s': %s\n", filename, strerror(errno));
+            fprintf(stderr, "Failed to read from file '%s': %s\n", filepath, strerror(errno));
+            exit(1);
+        }
+        if (fileSize > MAX_TEXT_LEN) {
+            fprintf(stderr, "File '%s' exceeds the maximum size of %d bytes\n", filepath, MAX_TEXT_LEN);
             exit(1);
         }
         fclose(file);
@@ -169,14 +173,17 @@ parse_options(int32_t argc, char **argv)
             printf("Enter text to encode (Ctrl+D to finish): ");
             fflush(stdout);
         }
-        FILE *file = stdin;
-        size_t fileSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN, file);
-        if (ferror(file) != 0) {
+        size_t inputSize = fread(options.text, sizeof(options.text[0]), MAX_TEXT_LEN + 1, stdin);
+        if (ferror(stdin) != 0) {
             fprintf(stderr, "Failed to read from STDIN: %s\n", strerror(errno));
             exit(1);
         }
-        options.text[fileSize] = '\0';
-        options.textLen = (int32_t)fileSize;
+        if (inputSize > MAX_TEXT_LEN) {
+            fprintf(stderr, "Input exceeds the maximum length of %d characters\n", MAX_TEXT_LEN);
+            exit(1);
+        }
+        options.text[inputSize] = '\0';
+        options.textLen = (int32_t)inputSize;
     }
 
     ASSERT(options.textLen > 0);
